@@ -1,5 +1,18 @@
 # Science & Game Systems 2차 설계
 
+## 현행 작업 계약 / 2026-10-26
+
+- `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053이 Slice 0~2의 적용 기준이다. 아래 보존 원안의 API·teachingTags·loader·미정 목록을 복사하지 않는다.
+- Science 정본은 Slice 2에서만 활성화한다. Slice 1에 topic enum·fixture·원소 fake를 제공하지 않는다.
+- 원소 정본 `elements.ts`와 topic 정본 `studyTopics.ts`는 Science 소유다. `teachingTags`·관련 registry는 폐기하고 `cautionTags`와 topic concept/query를 사용한다. 닫힌 ScienceQueryDefinition과 정확한 7 topic/query 집합은 `docs/15` 4절을 따른다.
+- Science는 순수 query·capability·학습 전이 규칙을 제공하고 State가 공개 envelope·selector facade와 원자 커밋을 소유한다. UI 입력 effectId와 역할별 CommandResult는 사용하지 않는다.
+- 공개 실행은 performSelfStudy만, 무료 상승은 오후 완료 0→1만, level 3은 슬롯 미소비 거부다. 함께 공부·관계·미션의 실제 콘텐츠·효과는 후속 승인까지 예약한다.
+- 조회 문맥을 State에서 재검증하며 exam에서 general 위장 요청도 검색·필터·비교를 열지 않는다. 시험에는 결정 021의 기본 필드만 제공한다.
+- 독립 수용값 assertion과 runtime 사실 정본을 분리한다. 필수 Science 무효는 fallback 없이 차단하고 이미지 실패와 혼용하지 않는다.
+- 상태: **PM 계약 수정 반영 / QA 재검토 필요 / 구현 미승인·NOT TESTED**.
+
+## 보존 원안 / 2026-09-28 / 구현 근거 아님
+
 **상태:** `SLICE 1~2 DESIGN PROPOSAL / 구현 승인 아님`  
 **범위:** Slice 1 하루 루프 + Slice 2 과학 정본·공부·주기율표  
 **작성일:** 2026-09-28  

@@ -1,5 +1,18 @@
 # 프런트엔드 UI/UX 2차 설계
 
+## 현행 작업 계약 / 2026-10-26
+
+- 적용 기준은 `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`와 결정 047~053이다. 아래 보존 원안의 저장·복원 화면, API·fixture·설정 제안을 그대로 구현하지 않는다.
+- Slice 0은 metadata·virtual manifest 부트, 홈·이름 검증·빈 갤러리뿐이다. GameState·Science·저장 검사·복원·임시 catalog가 없다. Slice 1 Day, Slice 2 Science로 순차 연결한다.
+- State facade의 공개 envelope·selector 결과만 소비한다. UI에서 phase·시험·슬롯·숙련도·capability를 재계산하지 않고 effectId·점수를 전달하지 않는다. 재전송은 원래 envelope 전체를 유지한다.
+- HomeShell/GameShell 상호 배타·단일 overlay·포커스 복귀·홈 전용 갤러리를 유지한다. 정본 실패는 막고 개별 이미지 실패는 국소 대체하며 상태를 바꾸지 않는다.
+- npm·package-lock·TS/Vite·scripts 통합을 Frontend가 맡고 QA가 테스트 설정·수동 검증을 맡는다. Asset resolver를 UI adapter에 다시 구현하지 않는다. 파일은 승인된 Slice에서 필요한 만큼만 만든다.
+- 이름 grapheme은 결정 045, path 입력 allow-list·최종 URL 보존은 결정 051을 따른다. 실제 소문자 lovechemistry 경로도 검증한다.
+- 저장 미구현·메모리 진행 중립 문구는 `docs/15` 6절을 사용한다. final copy·캐릭터 대사·비주얼은 유예한다.
+- 상태: **PM 계약 수정 반영 / QA 재검토 필요 / 구현 미승인·NOT TESTED**.
+
+## 보존 원안 / 2026-09-28 / 구현 근거 아님
+
 **상태:** `DESIGN PROPOSAL / 코드 구현 승인 아님`
 **범위:** Slice 0~2의 프런트엔드 구조와 UI 계약
 **작성일:** 2026-09-28

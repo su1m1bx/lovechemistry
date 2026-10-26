@@ -1,14 +1,16 @@
 # QA 계획
 
-**상태:** `V2 PRE-IMPLEMENTATION REVIEW PASS / S0~S2 READY FOR PM IMPLEMENTATION AUTHORIZATION / IMPLEMENTATION NOT APPROVED·NOT TESTED`  
+**상태:** `결정 022~046 QA PASS 이력 유지 / 결정 047~053 QA 재검토 필요 / IMPLEMENTATION NOT APPROVED·NOT TESTED`
 **작성일:** 2026-09-28  
 **범위:** 잠금 규칙, 다섯 역할의 2차 설계, 구현 전 계약 검토 및 구현 후 인수·회귀 기준
+
+**2026-10-26 PM 변경 통지:** `docs/15_IMPLEMENTATION_CONTRACT.md`의 FIX-01~12가 새 재검토 입력이다. QA 담당은 테스트 설정·수동 접근성·지원 데스크톱/모바일 브라우저 검증을 맡는다. 아래 2026-09-28 결과는 당시 계약의 이력이며 새로운 회차 receipt·query·자산·API 수정에 자동 PASS를 부여하지 않는다. QA 소유 보고서의 과거 판정은 변경하지 않았다.
 
 ## 1. 목적과 현재 판정
 
 이 문서는 《러브 앤 케미스트리》의 구현 전·후 품질 게이트를 정의한다. QA는 잠금 규칙을 변경하거나 제품을 재설계하지 않으며, 제안 간 계약을 임의로 선택하지 않는다.
 
-2026-09-03 재검토의 결정 004~021 계약 `PASS`는 과거 이력으로 유지한다. 2026-09-28에는 다섯 `DESIGN_V2.md`, `docs/00`~`12`, 결정 022~046을 재검토했다. 결정 043~046으로 High 2건과 Medium 2건의 문서상 원인이 해소되어 QA-V2-001~004는 `CLOSED`다. Slice 0~2는 `READY FOR PM IMPLEMENTATION AUTHORIZATION`이지만 아직 구현 승인은 없고 코드·최종 콘텐츠·자산·production build·배포는 `NOT TESTED`다.
+2026-09-03 재검토의 결정 004~021 계약 `PASS`는 과거 이력으로 유지한다. 2026-09-28에는 다섯 `DESIGN_V2.md`, `docs/00`~`12`, 결정 022~046을 재검토했다. 결정 043~046으로 High 2건과 Medium 2건의 문서상 원인이 해소되어 QA-V2-001~004는 `CLOSED`다. 당시 Slice 0~2의 `READY FOR PM IMPLEMENTATION AUTHORIZATION` 판정은 그 범위에 한정되며 결정 047~053은 재검토가 필요하다. 구현 승인·코드·최종 콘텐츠·자산·production build·배포 증거는 없다.
 
 - 시험일은 세 Day 모두 `morningHomeroom → morningClass → lunchFreeTime → afternoonClass → exam → 합격 시 afterSchoolFreeTime → dayEnd`로 정렬됐다. 과거 `QA-002`는 `CLOSED`이고 OQ-002도 결정 020으로 `RESOLVED`다. 효과 완료 직후 Character End를 판정하되 현재 또는 도달 시험 미완료 시 합격까지 보류하고 퇴학을 우선한다.
 - 일곱 집중 루트는 시험 공부를 포함해 28~41행동이고 총 60행동 중 19~32행동을 남긴다. Ne는 일반 상호작용 최대 `+12`로 시작값 포함 22에 그치며, 필수 체인 `+29`와 특수 행동 `+32`를 포함하면 83이다.
@@ -200,4 +202,4 @@
 | Slice 4 이후·전체 콘텐츠 | `NOT TESTED` | 최종 ID, 루트별 정적 추적표, 개별 델타 데이터, 미션·문항·아이템·대사 및 실행 증거 없음 |
 | 기능·통합·출시 | `NOT TESTED` | 코드, 자산, production build, 실배포 미존재 |
 
-Slice 0~2는 `READY FOR PM IMPLEMENTATION AUTHORIZATION`이다. 이는 자동 구현 승인이 아니며 사용자 또는 PM의 별도 승인 전 코딩을 시작하지 않는다. 구현·접근성·브라우저·production build·실배포는 계속 별도 `NOT TESTED` 또는 실행 결과로 판정한다.
+위 표는 2026-09-28 당시의 QA 판정 이력이다. 현재 결정 047~053은 별도 재검토가 필요하며 자동 구현 승인이 아니다. 명시적 구현 승인 전 코딩을 시작하지 않는다. 구현·접근성·브라우저·production build·실배포는 계속 별도 `NOT TESTED` 또는 실제 실행 결과로 판정한다.

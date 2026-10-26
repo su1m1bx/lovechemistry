@@ -1,5 +1,16 @@
 # Narrative 2차 설계
 
+## 현행 작업 계약 / 2026-10-26
+
+- `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053을 적용한다. 아래 보존 원안은 배경 제안이며 실제 scene·choice·캐릭터 fixture 생성 근거가 아니다.
+- 학습이 학교 행동과 관계의 맥락에서 쓰이는 것이 목표다. 후속 콘텐츠는 인물 동기·사실 활용·플레이어 행동·관계 결과를 추적하며 모든 요청을 퀴즈로 바꾸지 않는다. 화학 성질로 연애 정답을 확정하지 않는다.
+- Slice 0~2의 이름 확인·저장 미구현·메모리 진행 문구는 `docs/15` 6절의 중립 검증 카피를 사용한다. 원안의 모든 텍스트는 의미 토큰만 허용한다는 제한은 이 중립 카피에 한해 대체한다. final 대사·출시 카피·루트 상세는 유예한다.
+- Frontend가 copy key와 문맥을 통합하고 Narrative는 가독성·인물/사건 스포일러·외형 중립성을 검토한다. 상태 오류를 관계 실패로 표현하지 않는다.
+- 과학 설명은 정본 참조로만 구성하고 query·capability·시험·슬롯·호감도·엔딩 판정을 소유하지 않는다. 숨은 인물·가짜 갤러리 슬롯·실제 SceneId/ChoiceId를 노출하지 않는다.
+- 상세 루트는 Slice 2 이후 별도 승인한다. 후속 대표 루트는 함께 공부·학교 행동·관계·시험·Day 저장·결말을 연결해 검증한다. 상태: **PM 계약 수정 반영 / QA 재검토 필요 / 구현 미승인·NOT TESTED**.
+
+## 보존 원안 / 2026-09-28 / 구현 근거 아님
+
 **상태:** `DESIGN PROPOSAL / 구현·패키지·최종 대사 승인 아님`  
 **범위:** Slice 0~2의 서사 책임 경계, 카피·장면·과학 설명 인터페이스, 향후 식별자 타입  
 **기준 문서:** `docs/00_PM_MASTER_SPEC.md`, `docs/01_LOCKED_GAME_RULES.md`, `docs/02_SCIENCE_BIBLE.md`, `docs/03_CHARACTER_BIBLE.md`, `docs/04_NARRATIVE_PLAN.md`, `docs/05_GAME_SYSTEMS_SPEC.md`, `docs/07_UI_UX_SPEC.md`, `docs/10_DECISION_LOG.md`, `docs/11_OPEN_QUESTIONS.md`, `agents/narrative/BRIEF.md`, `agents/narrative/PROPOSAL.md`

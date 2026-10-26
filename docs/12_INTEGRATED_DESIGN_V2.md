@@ -1,12 +1,14 @@
 # Slice 0~2 통합 2차 설계
 
-**상태:** `2차 통합 설계 / QA 사전검토 PASS / S0~S2 READY FOR PM IMPLEMENTATION AUTHORIZATION / 코드 구현 미승인`
+**상태:** `결정 047~053 충돌 수정 반영 / QA 재검토 필요 / 코드 구현 미승인·NOT TESTED`
 
 **작성일:** 2026-09-28
 
 **범위:** Slice 0 앱 골격, Slice 1 하루 상태기계·순수 스냅샷, Slice 2 과학 정본·학습 도구
 
 **변경 제한:** 이 문서는 코드·패키지·이미지 생성 또는 구현 착수를 승인하지 않는다.
+
+**최신 상세 계약:** [`15_IMPLEMENTATION_CONTRACT.md`](15_IMPLEMENTATION_CONTRACT.md). 2026-09-28 QA PASS는 결정 022~046의 과거 검토 이력이다. 이번 명령·receipt·query·자산·담당 변경에는 자동 적용되지 않는다.
 
 ## 1. 목적과 문서 지위
 
@@ -16,13 +18,14 @@
 
 1. `docs/00_PM_MASTER_SPEC.md`와 `docs/01_LOCKED_GAME_RULES.md`의 잠금 규칙
 2. 사용자 승인 결정 015, 020, 021
-3. `docs/10_DECISION_LOG.md`의 승인된 후속 PM 구현 결정(022~046 포함)
-4. 본 문서의 Slice 0~2 계약
-5. 역할별 `DESIGN_V2.md`의 채택되지 않은 제안
+3. `docs/10_DECISION_LOG.md`의 승인된 후속 PM 구현 결정(022~053 포함)
+4. `docs/15_IMPLEMENTATION_CONTRACT.md`의 이번 변경 상세 계약
+5. 본 문서의 나머지 Slice 0~2 계약
+6. 역할별 `DESIGN_V2.md`의 현행 작업 계약. 보존 원안은 구현 근거로 사용하지 않는다.
 
 본 문서의 계약 확정은 Ready to Code 판정이 아니다. 구현 전 체크리스트와 QA 사전 검토를 통과하고 별도 구현 승인을 받아야 한다.
 
-결정 043~046은 QA-V2-001~004의 문서상 차단 원인을 조정했고 QA 재검토에서 네 finding이 `CLOSED`됐다. Slice 0~2는 `READY FOR PM IMPLEMENTATION AUTHORIZATION`이지만 이는 자동 구현 승인이나 Ready to Code 선언이 아니다.
+결정 043~046에 대한 QA-V2-001~004의 `CLOSED` 이력은 유지한다. 결정 047~053으로 REVIEW-01~07의 PM 계약을 수정했으며, 변경 범위 QA 재검토와 별도 구현 승인을 기다린다. 과거 `READY FOR PM IMPLEMENTATION AUTHORIZATION`을 새 계약의 합격으로 해석하지 않는다.
 
 ## 2. 공통 불변 조건
 
@@ -76,7 +79,7 @@ Slice 0 부트는 위 두 항목만 필수로 검증한다. Science catalog는 �
 
 **완료 게이트 S0**
 
-문서 계약상 QA-V2-003·004 대응 oracle은 결정 045·046과 5.2절·8절에 확정됐고 QA 재검토에서 `CLOSED`됐다. 현재 게이트 상태는 **READY FOR PM IMPLEMENTATION AUTHORIZATION / 구현 미승인 / 브라우저·Pages 실행 NOT TESTED**다.
+QA-V2-003·004의 종료 이력은 유지한다. 결정 051·052·053의 경로·부트·담당 변경은 **QA 재검토 필요 / 구현 미승인 / 브라우저·Pages 실행 NOT TESTED**다.
 
 - [ ] 앱 metadata와 virtual asset manifest만 부트 필수 항목이다.
 - [ ] 원소 stub·fake·부분 데이터가 production 및 fixture 번들에 없다.
@@ -123,7 +126,7 @@ Day 10·20·30의 오후 수업을 완료하면 반드시 `exam`으로 전이한
 
 **완료 게이트 S1**
 
-문서 계약상 QA-V2-001·002의 Slice 경계와 시험 import/build 경계는 결정 043·044 및 본 절에 정렬됐고 QA 재검토에서 `CLOSED`됐다. 현재 게이트 상태는 **READY FOR PM IMPLEMENTATION AUTHORIZATION / 구현 미승인 / 상태기계·snapshot·source boundary·production build·E2E NOT TESTED**다.
+QA-V2-001·002의 종료 이력은 유지한다. 결정 048·049의 envelope·회차 receipt·snapshot 변경은 **QA 재검토 필요 / 구현 미승인 / 상태기계·snapshot·source boundary·production build·E2E NOT TESTED**다.
 
 - [ ] 일반일 phase 순서와 슬롯이 command만으로 결정적으로 전이한다.
 - [ ] Slice 1 수업은 topic·ScienceCatalog 없이 generic 완료되고 숙련도와 snapshot에 topic 흔적을 만들지 않는다.
@@ -136,7 +139,7 @@ Day 10·20·30의 오후 수업을 완료하면 반드시 `exam`으로 전이한
 - [ ] Day 30 뒤 Day 31이 생성되지 않는다.
 - [ ] 세 snapshot 종류가 순수 생성·전체 검증·JSON round-trip에서 동일 의미를 보존한다.
 - [ ] in-memory adapter를 UI가 실제 저장·불러오기·저장 성공으로 표현하지 않는다.
-- [ ] 현재 Day command receipt가 다음 `dayStart`에서 정리되고 `examResolved`·`terminal`에는 보존된다.
+- [ ] 회차 전체 성공 command receipt가 `dayStart`·`examResolved`·`terminal`에 보존되고 Day 전환 뒤 재전송도 duplicate다.
 - [ ] command receipt와 effect ledger가 서로 다른 필드·책임을 가진다.
 - [ ] no-op ending evaluator가 효과 적용·전체 검증 뒤 호출되며 route·mission·affection을 만들지 않는다.
 
@@ -176,7 +179,7 @@ Science bundle은 원소 정본, 일곱 topic 정의, 과학 콘텐츠 버전과
 
 **완료 게이트 S2**
 
-문서 계약상 topic 소유는 결정 043에 따라 Slice 2로 정렬됐고 QA 재검토를 통과했다. 현재 게이트 상태는 **READY FOR PM IMPLEMENTATION AUTHORIZATION / 구현 미승인 / Science·학습·UI 실행 NOT TESTED**다.
+topic 경계의 과거 QA 통과 이력은 유지한다. 결정 050의 닫힌 query·수용 검사 변경은 **QA 재검토 필요 / 구현 미승인 / Science·학습·UI 실행 NOT TESTED**다.
 
 - [ ] 원소 정본은 TypeScript readonly 데이터 모듈 하나이고 validator는 별도 순수 함수다.
 - [ ] 정확히 20개 값과 모든 불변식이 Science V2 수용표와 일치한다.
@@ -195,11 +198,11 @@ Science bundle은 원소 정본, 일곱 topic 정의, 과학 콘텐츠 버전과
 
 | Slice | QA-V2 문서 차단 조정 | 현재 판정 |
 |---|---|---|
-| Slice 0 | QA-V2-003은 결정 045의 grapheme oracle, QA-V2-004는 결정 046의 URL oracle로 계약 보완 | `PASS / READY FOR PM IMPLEMENTATION AUTHORIZATION / NOT TESTED` |
-| Slice 1 | QA-V2-001은 topic 제거·generic 수업, QA-V2-002는 test-only import/build 경계로 계약 보완 | `PASS / READY FOR PM IMPLEMENTATION AUTHORIZATION / NOT TESTED` |
-| Slice 2 | topic 상태·명령·무료 `0→1`을 ScienceCatalog 활성화와 함께 도입하도록 정렬 | `PASS / READY FOR PM IMPLEMENTATION AUTHORIZATION / NOT TESTED` |
+| Slice 0 | QA-V2-003·004 과거 CLOSED 유지; 결정 051~053의 자산·부트·담당 수정 추가 | `QA RE-REVIEW REQUIRED / NOT TESTED` |
+| Slice 1 | QA-V2-001·002 과거 CLOSED 유지; 결정 048·049의 API·receipt 수정 추가 | `QA RE-REVIEW REQUIRED / NOT TESTED` |
+| Slice 2 | topic 경계 과거 PASS 유지; 결정 050의 query 상세 추가 | `QA RE-REVIEW REQUIRED / NOT TESTED` |
 
-이 표의 `PASS`는 문서 계약 판정이다. 사용자 또는 PM의 별도 구현 승인 전 Ready to Code인 Slice는 없다.
+과거 문서 PASS와 이번 변경의 QA 필요 상태를 구분한다. 별도 구현 승인 전 Ready to Code인 Slice는 없다.
 
 ## 4. 채택 파일 구조
 
@@ -388,7 +391,7 @@ type GameStateSlice2 = GameStateSlice1 & {
 
 Slice 1은 `StudyTopicId`를 참조하지 않고 `DailyClassStateSlice1`의 두 완료 불리언만 저장한다. Slice 2에서 검증된 ScienceCatalog와 함께 `selectedTopicId`를 추가한다. 아직 배포 persistence가 없으므로 이 shape 추가에도 migration·compatibility code를 만들지 않는다. Slice 1 enum·문자열·fixture로 일곱 topic을 복제하거나 fake topic을 넣는 것은 금지한다.
 
-`commandReceipts`는 전송 재시도의 멱등성을, `effectLedger`는 보상·비용·플래그 적용의 멱등성을 보장한다. 하나를 다른 용도로 대신 쓰지 않는다. receipt는 현재 Day 범위로 유지하고 다음 `dayStart` 생성 때 정리한다. 현재 Day의 `examResolved`와 `terminal` snapshot에는 그대로 보존한다. effect ledger의 수명은 회차 상태가 소유하며 receipt 정리와 함께 지우지 않는다.
+`commandReceipts`는 전송 재시도, `effectLedger`는 비용·보상 효과 중복을 담당한다. 결정 049에 따라 둘 다 회차 전체에서 유지하며 세 snapshot에 포함한다. Day 전환에서 삭제하지 않는다. 최초 revision·경계 증가·순수 snapshot 투영은 `docs/15` 3절을 따른다.
 
 ### 5.4 Snapshot
 
@@ -440,6 +443,8 @@ type ScienceCatalog = {
 ```
 
 정본은 `elements.ts`의 readonly 모듈 하나다. 컴파일된 내부 상수를 런타임마다 `unknown`으로 취급할 필요는 없지만, 테스트 fixture·향후 외부 경계 등 `unknown` 입력은 별도 `validateScienceCatalog(value: unknown)` 순수 함수가 검증한다. validator가 대체값을 채우거나 입력을 수정하지 않는다.
+
+`ScienceQueryDefinition`, 7개 topic별 concept·query 집합과 입력·조회 오류는 `docs/15` 4절의 닫힌 정의를 사용한다. topic 타입·목록을 State와 UI에 중복 선언하지 않는다. 시험 문맥의 조회 권한은 실제 phase에서 재검증한다.
 
 `teachingTags`는 원소마다 중복 저장하지 않는다. 어떤 개념과 질의를 어떤 원소에 적용하는지는 `StudyTopicDefinition`의 `conceptKeys`와 `queryDefinitions`가 소유하고 정본 원소 필드를 질의한다. 설명상 주의가 필요한 H, He, Ne, Ar 등의 `cautionTags`는 필수 필드로 유지한다.
 
@@ -525,6 +530,8 @@ type AcademicState = {
 
 함수명은 역할 간 공개 계약이다. UI는 내부 상태 필드를 조합해 같은 판정을 다시 만들지 않는다.
 
+아래 표의 command ID·topic ID는 payload 의미를 축약한 것이다. 실제 입력은 결정 048과 `docs/15` 2절의 공통 envelope이며 expected revision·run ID를 생략하지 않는다. 오류·selector의 상세 입출력도 같은 절을 단일 기준으로 사용한다. Slice 1의 실행 가능한 action 정본은 없으므로 `resolveFreeAction`은 UNKNOWN_ID로 거부하고 passFreeTime으로 진행한다.
+
 ### 6.1 Selectors
 
 | Selector | 출력 책임 |
@@ -583,7 +590,7 @@ Slice 2의 topic 입력 형태는 Slice 1 command의 overload를 병존시키는
 
 ### 6.4 Command 결과
 
-모든 command는 `applied`, `duplicate`, `rejected`를 구분한다. 같은 command ID와 같은 fingerprint는 상태를 다시 바꾸지 않는 `duplicate`, 같은 ID와 다른 payload는 충돌 거부다. revision 검사보다 receipt의 동일 ID·fingerprint 검사를 먼저 수행한다. 거부 결과는 입력 상태와 revision을 그대로 반환한다.
+모든 command는 `applied`, `duplicate`, `rejected`를 구분한다. envelope schema·run 일치 후, revision 검사보다 receipt·fingerprint 검사를 먼저 수행한다. 같은 fingerprint는 현재 상태 불변 duplicate, 다르면 충돌이다. fingerprint에 expected revision도 포함하며 정확한 정본 문자열·오류·처리 순서는 `docs/15` 2절을 따른다. terminal 동일 재전송도 duplicate이며 새 명령만 거부한다.
 
 ## 7. UI와 셸 계약
 
@@ -612,6 +619,8 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 - 대소문자를 변환하지 않는다. manifest path와 production build artifact를 문자 단위 exact case로 비교하며 mismatch는 통합 실패다.
 - preload는 실제 파일·용량·스포일러 정책 승인 후로 유예한다.
 
+결정 051·052의 보완은 `docs/15` 5절과 `docs/09`를 따른다. 실제 경로는 ASCII segment allow-list와 확장자를 검증하고 `%`를 포함한 인코딩 입력을 URL 생성 전에 거부한다. 최종 same-origin·앱 assets/ 하위 경로·빈 query/hash도 검사한다. 부트 필수 manifest 무효는 차단하고 정상 placeholder·소비 요청 오류·실제 이미지 실패는 구분한다.
+
 ## 9. Narrative 계약
 
 - Slice 0~2 시스템 카피는 중립적이고 기능·상태를 설명할 수 있다.
@@ -636,6 +645,8 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 
 공유 파일을 수정할 때는 소유 역할의 계약 변경 제안, PM 결정, 관련 문서 갱신, QA 재검토 순서를 따른다. UI가 상태 규칙을, State가 과학 사실을, Asset이 해금 규칙을, Narrative가 판정을 소유하지 않는다.
 
+결정 053에 따라 npm·단일 package-lock·TS/Vite·scripts 통합은 Frontend, 테스트 설정·수동 브라우저/접근성 검증은 QA다. State facade·Science 정본·Asset resolver별 단일 담당과 중립 검증 카피는 `docs/15` 6절로 확정한다. 역할 간 공통 파일은 동시에 별도 버전으로 만들지 않는다.
+
 ## 11. 충돌 해결표
 
 | 충돌·긴장 | 제안 차이 | 통합 결정 | 잠금 영향 |
@@ -650,11 +661,11 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 | 일반 검색 | 기존 `docs/05` 승인 상태가 제안, V2 권고 | 숙련도와 무관하게 항상 허용으로 승인 | 없음 |
 | 함께 공부 Slice 2 | Science V2 command는 실행 가능 형태, 캐릭터·장면 없음 | 타입·확장점만 예약, UI·명령 실행 불가 | 없음 |
 | level 3 공부 | State V2는 소비 가능성 유보, Systems V2는 차단 권고 | 실행 전 차단, 슬롯 미소비 | 없음 |
-| 당일 수업 상태 | 기존 `docs/06`에 명시 필드 없음 | `dailyClass` 세 필드 추가 | 없음 |
+| 당일 수업 상태 | 기존 `docs/06`에 명시 필드 없음 | S1은 완료 두 필드, S2에서 selectedTopicId 추가 | 없음 |
 | 시험 stub | State V2 테스트 stub이 오용될 위험 | production fail-closed, 테스트 port만 49/50/100 | 없음 |
 | snapshot 구현 시점 | 저장 전체는 Slice 3이나 경계 검증은 Slice 1에 필요 | 순수 snapshot·in-memory를 Slice 1, 브라우저 영속화는 Slice 3 | 없음 |
 | `studiedTopics` | 기존 `docs/06`은 progress와 중복 저장 | mastery>0에서 파생, 저장 제거 | 없음 |
-| command/effect 멱등성 | V2 최소 상태가 command receipt 중심 | receipt와 effect ledger 분리, Day receipt 정리 정책 승인 | 없음 |
+| command/effect 멱등성 | V2 최소 상태가 command receipt 중심 | receipt와 effect ledger 분리; 결정 049로 모두 회차 보존 | 없음 |
 | `examGate` | 임시 비배포 필드 또는 Academic exams 조기 도입 | Slice 1 최소 상태 필드, 실제 시험 Slice에서 흡수, 배포 저장 없어 호환 코드 없음 | 없음 |
 | Slice 1 topic 선행 | 결정 033의 topic 상태가 ScienceCatalog보다 먼저 필요 | 결정 043에 따라 Slice 1은 완료 불리언과 generic 수업만, topic·무료 `0→1`은 Slice 2에서 동시 활성화; fake topic 금지 | 없음 |
 | 시험 test port 격리 | UI 비노출만으로 production export·bundle 유입을 증명하지 못함 | 결정 044의 tests-only 파일, production export/import graph, marker·build·E2E oracle 채택 | 없음 |
@@ -693,7 +704,7 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 - 실제 preload·캐시·다중 해상도 전략
 - optionalSettings UI와 MetaState 영속 키
 - 실제 `localStorage` 키, A/B, checksum, migration, 다중 탭 정책
-- `runId` 생성 방식과 command fingerprint 정본 직렬화 세부
+- 후속 Slice의 슬롯 비소비 명령 추가에 따른 receipt 크기 예산. 현재 ID 생성·fingerprint는 결정 048·049로 확정
 - 최종 과학 설명 문장과 topic별 세부 카피
 - 성능 예산과 실제 기기 세부 모델
 
@@ -759,8 +770,8 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 - 세 snapshot의 phase, Day, 슬롯, 수업, 시험 결과, runStatus 불변식이 정확한가.
 - Slice 1 snapshot에 topic 필드·ID·fake fixture가 없고 Slice 2 snapshot에서만 검증된 `selectedTopicId`가 추가되는가.
 - stringify/parse round-trip이 키·값·의미를 보존하고 현재 시각·DOM·난수에 의존하지 않는가.
-- next dayStart에서 이전 Day receipt만 정리되고 effect ledger는 지워지지 않는가.
-- examResolved·terminal에 현재 Day receipt가 남아 중복 재전이를 막는가.
+- 모든 dayStart·examResolved·terminal에 회차 전체 receipt와 ledger가 보존되는가.
+- Day 전환·다음 Day 진행·terminal 뒤 동일 요청도 현재 상태 불변 duplicate인가.
 - in-memory adapter API가 persistence 또는 load 성공 용어를 사용하지 않는가.
 
 ### 15.5 Science·학습·주기율표
@@ -795,16 +806,16 @@ CR-AI-01~05를 모두 채택하며 세부 정본은 갱신된 `docs/09_ASSET_MAN
 - [ ] Slice 0에는 Science·GameState·persistence 구현이 들어가지 않는다.
 - [ ] Slice 1에는 localStorage·Meta·route·affection·mission 구현이 들어가지 않는다.
 - [ ] Slice 2에는 studyTogether 실행, 실제 시험, route/story 구현이 들어가지 않는다.
-- [ ] selector·command 입력·결과·오류와 전체 불변식 테스트 목록이 준비됐다.
+- [x] selector·command 입력·결과·오류와 수정 불변식 명세가 `docs/15` 2·3·7절에 준비됐다. QA 재검토·구현 테스트는 별도다.
 - [x] 이름의 authoritative `graphemer@1.4.0`과 fixture oracle이 결정 045로 정의됐다. 패키지는 설치하지 않았고 실행은 아직 없다.
 - [x] production 시험 raw score 비노출, marker 검사와 Day 10 fail-closed E2E 방법이 결정 044로 정의됐다. 실행은 아직 없다.
-- [ ] snapshot을 저장 성공으로 표시하지 않는 UI 문구가 검토됐다.
-- [ ] 과학 정본 20개와 topic 7개의 정적 수용 검사가 준비됐다.
+- [x] snapshot을 저장 성공으로 표시하지 않는 중립 문구를 결정 053·`docs/15` 6절로 확정했다. UI 실행은 미검증이다.
+- [x] 과학 정본 20개와 topic 7개·query 정적 수용 검사 명세가 `docs/15` 4·7절에 준비됐다. 실행 테스트는 아직 없다.
 - [x] Pages directory/index/root URL oracle, 금지 path와 exact-case 검증 방법이 결정 046으로 정의됐다. production build 실행은 아직 없다.
-- [ ] 키보드·포커스·200%·reduced motion·지원 브라우저 수동 검증 담당이 배정됐다.
+- [x] 키보드·포커스·200%·reduced motion·지원 브라우저 수동 검증 담당을 QA로 배정했다. 증거는 아직 없다.
 - [ ] 최종 색·서체·자산 비율·final copy·시험 콘텐츠·route/story가 유예 상태로 남아 있다.
 - [ ] 별도 구현 승인 전 코드·패키지·이미지 작업을 시작하지 않는다.
 
 ## 17. 최종 판정
 
-결정 043~046과 역할별 최신 계약으로 QA-V2-001~004를 문서 계약 기준 종료했다. 잠금 변경이나 BLOCKED CHANGE REQUEST는 없고 코드·패키지·런타임·production build 증거도 없다. Slice 0~2는 **QA 사전검토 PASS / READY FOR PM IMPLEMENTATION AUTHORIZATION**지만 현재 구현은 미승인이고 실행은 `NOT TESTED`다. 별도 승인 전 어떤 Slice도 Ready to Code로 선언하지 않는다.
+QA-V2-001~004의 문서 종료 이력은 유지한다. 결정 047~053과 `docs/15`로 REVIEW-01~07의 PM 계약 수정을 반영했다. 잠금 변경·새 BLOCKED CHANGE REQUEST는 없지만 **변경 범위 QA 재검토 필요 / 구현 미승인 / 런타임·build NOT TESTED**다. 이번 수정은 QA 합격이나 Ready to Code 선언이 아니다.

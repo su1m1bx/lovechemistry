@@ -334,6 +334,7 @@
 
 ## 2026-09-28 / 036
 
+- **현재 상태:** `PARTIALLY SUPERSEDED` (2026-10-26 / 049). receipt와 effect ledger의 책임 분리는 유지하고 Day별 receipt 삭제는 회차 전체 보존으로 대체한다.
 - **쟁점:** 학습 파생 상태와 두 종류의 멱등성 기록
 - **검토한 선택지:** `studiedTopics` 중복 저장 / command ID를 모든 멱등성에 공용 / 파생 상태와 receipt·ledger 분리
 - **결정:** `studiedTopics`는 저장하지 않고 `mastery > 0`에서 파생한다. command receipt는 전송 멱등성, effect ledger는 보상 멱등성으로 분리한다. Slice 1 receipt는 Day 단위로 유지하고 다음 `dayStart`에서 정리하며 현재 Day `examResolved`·`terminal`까지 보존한다.
@@ -440,3 +441,74 @@
 - **QA 상태:** QA-V2-004의 문서상 원인을 해소하는 PM 계약이다. production Pages build 검증은 구현 후 수행하며 QA 재검토 전 Ready to Code로 판정하지 않는다.
 - **잠금 영향:** 없음. GitHub Pages 하위 경로 배포의 resolver·검증 구체화다.
 - **영향 파일:** `docs/12_INTEGRATED_DESIGN_V2.md`, Frontend V2 구현 계약, 향후 Vite·asset resolver·Pages QA
+
+## 2026-10-26 / 047
+
+- **쟁점:** REVIEW-01의 옛 역할 제안과 통합 계약 혼용, 제품 목표의 기술 골격화
+- **검토한 선택지:** 원안을 모두 현행으로 유지 / 원안을 삭제 / 이력을 보존하되 현행 작업 계약을 단일화
+- **결정:** `docs/15_IMPLEMENTATION_CONTRACT.md`를 이번 변경의 단일 상세 계약으로 채택하고 역할 V2 상단에 현행 계약, 나머지에 보존 원안 표시를 둔다. 기본 사실 활용·학교 행동·인물 동기·관계 결과의 연결을 후속 대표 루트 인수 기준으로 둔다. 상세 콘텐츠·코드는 승인하지 않는다.
+- **이유:** 과학을 사용하는 학교생활·연애 경험을 지키면서, 서로 다른 초안을 그대로 구현하는 재작업을 막는다.
+- **잠금 영향:** 없음. 제품 정체성과 유예를 유지한다.
+- **영향 파일:** `docs/12`, `14`, `15`, 역할 지침·V2 설계, README
+- **QA 상태:** 후속 계약 재검토 필요. 과거 QA PASS를 새 결정에 승계하지 않는다.
+
+## 2026-10-26 / 048
+
+- **쟁점:** REVIEW-02의 공개 API·오류·fingerprint와 ID 생성 주체
+- **검토한 선택지:** 역할별 API·오류 유지 / UI adapter로 판정 보정 / 단일 State facade와 명시적 envelope
+- **결정:** run ID·command ID·expected revision·type·payload envelope와 `applied/duplicate/rejected`를 단일화한다. fingerprint는 `[1, runId, expectedStateRevision, type, canonicalPayload]`의 정본 JSON 문자열이다. 난수 ID 생성은 앱 계층에 한정하고 engine에는 고정 입력으로 주입한다. UI 제공 effect ID와 raw score는 금지한다. selector 입출력·거부 결과와 capability 재검증은 `docs/15` 2절을 따른다.
+- **이유:** 전송 중복·게임 효과 중복·낙관적 revision 충돌을 구분하고 화면이 규칙을 복제하지 않게 한다.
+- **잠금 영향:** 없음. 결정 036의 receipt/ledger 분리는 유지한다.
+- **영향 파일:** `docs/12`, `15`, State·Systems·Frontend V2, 향후 공개 API·테스트
+- **QA 상태:** FIX-02·03·07·11 실행 및 계약 재검토 필요.
+
+## 2026-10-26 / 049
+
+- **쟁점:** REVIEW-03의 Day 경계 receipt 정리와 재전송 보장
+- **검토한 선택지:** Day별 삭제와 예외 cache / 최근 두 Day 유지 / 30일 회차 전체 성공 receipt 유지
+- **결정:** Slice 1~2 성공 receipt를 회차 종료까지 세 snapshot에 보존한다. 새 회차에서만 초기화한다. checkpoint 전이만 snapshot revision을 올리고 snapshot 투영은 순수하다. Day 전환·자기 receipt·revision·snapshot 후보는 한 원자 전이로 만든다.
+- **supersession:** 결정 036의 Day 단위 receipt 삭제 부분은 `PARTIALLY SUPERSEDED`다. receipt/ledger 책임 분리는 유지한다. 기존 `docs/12`의 Day별 정리 문구도 대체한다.
+- **이유:** 현재 최대 183건의 작은 회차 모델에서는 삭제 예외보다 전체 보존이 단순하고 Day 종료·terminal 재시도 의미가 일정하다. 후속 슬롯 비소비 변경 명령 도입 때 크기 예산을 재검토한다.
+- **잠금 영향:** 없음. Day 기반 영속 경계를 추가하지 않는다.
+- **영향 파일:** `docs/06`, `12`, `15`, State V2, 향후 snapshot·멱등성 테스트
+- **QA 상태:** FIX-04·05 재검토·실행 필요.
+
+## 2026-10-26 / 050
+
+- **쟁점:** REVIEW-04의 미정 ScienceQueryDefinition과 과학·검증 중복 정본
+- **검토한 선택지:** 화면별 질의식 / 임의 수식 DSL / 닫힌 facts·search·filter·compare 정의
+- **결정:** `docs/15` 4절의 닫힌 query union, 7개 topic별 정확한 concept·query 집합, 비교 입력·capability·실패 결과를 채택한다. Science가 소유하고 State facade가 공개하며 UI는 표시만 한다. 원소 수용값의 독립 test-only assertion과 런타임 정본을 구분한다.
+- **이유:** 필요한 학습 도구를 구현할 수 있게 하되 고급 화학·범용 평가기·사실 복제·시험 정답 자동화를 막는다.
+- **잠금 영향:** 없음. 학습 단계·조회 공정성·시험 제한을 유지한다.
+- **영향 파일:** `docs/05`, `12`, `15`, Science V2, 향후 topic·query·validator·QA
+- **QA 상태:** FIX-06·07 재검토·실행 필요.
+
+## 2026-10-26 / 051
+
+- **쟁점:** REVIEW-05의 인코딩된 dot segment와 URL 해석 후 경로 이탈
+- **검토한 선택지:** literal `..`만 차단 / decode 후 재검증 / ASCII 파일 경로 allow-list와 최종 URL 포함 관계 검사
+- **결정:** 실제 asset path는 `assets/` 아래의 선언 format 확장자를 가진 ASCII 파일 경로로 제한한다. `%`, 빈·점·연속 점 segment, 비허용 문자를 URL 생성 전에 거부한다. 결정 046의 두 단계 URL 해석은 유지하고 최종 same-origin·앱 assets/ 하위 pathname·빈 search/hash를 검사한다. 소문자 실제 저장소 경로 oracle을 추가한다.
+- **이유:** 인코딩·대소문자 보정·경로 추측 없이 배포 위치와 원본 파일을 일치시킨다.
+- **잠금 영향:** 없음. 자산 파일명 제약이며 사용자 이름 Unicode 정책은 바꾸지 않는다.
+- **영향 파일:** `docs/09`, `12`, `15`, Asset·Frontend V2, 향후 resolver·Pages QA
+- **QA 상태:** FIX-08 재검토와 production artifact·Pages 실행 필요.
+
+## 2026-10-26 / 052
+
+- **쟁점:** REVIEW-06의 필수 catalog 실패와 개별 이미지 fallback 혼용
+- **검토한 선택지:** 모든 오류 차단 / 모든 오류 fallback / 부트 필수 무결성과 소비자·파일 실패를 분리
+- **결정:** 필수 metadata·virtual manifest 무효는 부트 차단, 정상 가상 자산은 무요청 정상, 미등록 소비 요청·실제 이미지 실패는 국소 fallback으로 분류한다. S2 Science 무효는 대체값 없이 진행 차단한다. 상세 결과는 `docs/15` 5.2절을 따른다.
+- **이유:** 잘못된 게임·과학 데이터를 정상으로 숨기지 않으면서 이미지 하나 때문에 진행을 잃지 않게 한다.
+- **잠금 영향:** 없음. 어떤 fallback도 상태·과학·해금 규칙을 바꾸지 않는다.
+- **영향 파일:** `docs/09`, `12`, `15`, Asset·Frontend·Science V2
+- **QA 상태:** FIX-09 재검토·실행 필요.
+
+## 2026-10-26 / 053
+
+- **쟁점:** REVIEW-07의 공통 설정·검증 담당 충돌과 개발 진행의 저장 오인
+- **검토한 선택지:** 역할별 설정 독립 생성 / PM 일괄 구현 / 설정·도메인 단일 통합 담당과 QA 검증 분리
+- **결정:** Frontend가 npm·package-lock·TS/Vite·scripts를 통합하고 QA가 테스트 설정·수동 검증을 담당한다. State·Science·Asset의 facade·정본·resolver 소유권을 `docs/15` 6절로 고정한다. S0 이름 확인, S0~2 저장 미구현, S1~2 메모리 진행의 중립 검증 카피를 승인한다. 새 패키지는 이번에 설치하지 않는다.
+- **이유:** 공유 파일 동시 변경과 허위 저장 안내를 막고, 시스템 기능과 캐릭터 서사를 분리한다.
+- **잠금 영향:** 없음. 세션 전용 출시 플레이·장면 저장·최종 대사는 승인하지 않는다.
+- **영향 파일:** `docs/07`, `12`, `15`, 여섯 역할 지침, 역할 V2, README
+- **QA 상태:** 담당 배정은 문서 완료, 실제 기기·브라우저 증거는 NOT TESTED. 수정 계약 QA 재검토와 별도 구현 승인 필요.

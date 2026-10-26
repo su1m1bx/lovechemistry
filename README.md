@@ -4,13 +4,13 @@
 
 ## 현재 상태
 
-**Slice 0~2 통합 2차 설계와 QA 문서 사전검토가 완료됐으며, 별도 구현 승인 대기 단계입니다. 아직 Ready to Code가 아닙니다.**
+**Slice 0~2의 충돌 위험 7건을 PM 계약에 반영했습니다. 변경 계약의 QA 재검토와 별도 구현 승인을 기다리는 단계이며 아직 Ready to Code가 아닙니다.**
 
-최신 문서 판정은 `PASS / READY FOR PM IMPLEMENTATION AUTHORIZATION`입니다. 이는 구현 착수나 기능 합격을 뜻하지 않습니다. 애플리케이션 코드·테스트·실제 자산은 아직 없고, 런타임·빌드·배포는 `NOT TESTED`입니다.
+2026-09-28 QA PASS는 결정 022~046에 대한 과거 이력입니다. 결정 047~053의 현행 계약은 [`docs/15_IMPLEMENTATION_CONTRACT.md`](docs/15_IMPLEMENTATION_CONTRACT.md)이며 새 QA PASS를 뜻하지 않습니다. 애플리케이션 코드·테스트·실제 자산은 아직 없고 런타임·빌드·배포는 `NOT TESTED`입니다.
 
 진행 현황과 다음 게이트는 [`docs/13_PROGRESS.md`](docs/13_PROGRESS.md)에 기록합니다.
 
-구현 준비 중 충돌 위험과 조정 권고는 [`docs/14_CONFLICT_REVIEW.md`](docs/14_CONFLICT_REVIEW.md)를 참고합니다. 이 점검은 기존 QA 판정이나 구현 승인 상태를 변경하지 않습니다.
+충돌 근거와 수정 결과는 [`docs/14_CONFLICT_REVIEW.md`](docs/14_CONFLICT_REVIEW.md)를 참고합니다. 제품 목표는 **배운 화학을 학교생활의 행동과 관계 선택에 활용하는 연애·교육 시뮬레이션**이며 단순 퀴즈·호감도 파밍으로 대체하지 않습니다.
 
 GitHub 저장소: https://github.com/su1m1bx/lovechemistry
 
@@ -23,7 +23,8 @@ GitHub 저장소: https://github.com/su1m1bx/lovechemistry
 - PM 결정 기록: `docs/10_DECISION_LOG.md`
 - 미해결 질문 및 유예 항목: `docs/11_OPEN_QUESTIONS.md`
 - Slice 0~2 통합 구현 계약: `docs/12_INTEGRATED_DESIGN_V2.md`
-- 최신 QA 문서 검토 결과: `agents/qa/DESIGN_V2_REVIEW.md`
+- 충돌 수정 상세 계약: `docs/15_IMPLEMENTATION_CONTRACT.md`
+- 기존 QA 문서 검토 결과(결정 022~046 범위): `agents/qa/DESIGN_V2_REVIEW.md`
 - 진행 현황 기록: `docs/13_PROGRESS.md`
 - 구현 준비 충돌 점검: `docs/14_CONFLICT_REVIEW.md`
 - 역할별 작업 지침: `agents/*/BRIEF.md`

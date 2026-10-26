@@ -4,6 +4,10 @@
 
 구현 전 제안과 구현 후 결과를 잠금 규칙, 과학 정확성, 상태 복원, 루트 도달 가능성, 접근성 및 GitHub Pages 배포 관점에서 검증한다. 차단 결함은 통합·출시를 막되 제품을 창의적으로 재설계하지 않는다.
 
+## 현행 Slice 0~2 작업 기준
+
+`docs/12_INTEGRATED_DESIGN_V2.md`, `docs/14_CONFLICT_REVIEW.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053과 FIX-01~12가 필독이다. 기존 QA-V2 CLOSED는 유지하되 새 계약에는 자동 PASS를 부여하지 않는다. QA는 테스트 설정·키보드·포커스·200%·reduced motion·지원 데스크톱/모바일 브라우저 수동 검증을 담당하고 Frontend가 scripts·lockfile 변경을 통합한다. 정본 자기 비교만으로 과학 정확성을 합격시키지 않으며 production 시험 port 격리도 별도 검증한다. PM 계약 수정 기록을 QA 실행 증거로 취급하지 않는다.
+
 ## 필독 문서
 
 - `docs/00_PM_MASTER_SPEC.md`

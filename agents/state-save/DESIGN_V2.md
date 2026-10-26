@@ -1,5 +1,18 @@
 # State / Save 2차 설계
 
+## 현행 작업 계약 / 2026-10-26
+
+- 유일한 Slice별 적용 기준은 `docs/12_INTEGRATED_DESIGN_V2.md`와 후속 `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053이다. 아래 보존 원안의 타입·fixture·미정 목록을 구현 기준으로 복사하지 않는다.
+- Slice 0에는 GameState·저장 검사·복구 fixture가 없다. Slice 1은 topic 없는 Day 전이·순수 snapshot, Slice 2부터 검증된 topic과 학업 상태를 추가한다.
+- State는 공통 envelope·오류·receipt·snapshot과 공개 commands/selectors facade를 소유한다. Systems의 순수 규칙을 같은 원자 전이에 적용하며 두 번째 학습 상태를 만들지 않는다.
+- 공개 결과는 `status = applied/duplicate/rejected` 하나다. command ID·effect ID·revision은 `docs/15` 2절을 따른다. 학업 상태는 `topicProgressById`, `topicLastProgressSourceById`이며 `academics.topics` 원안은 비채택이다.
+- 성공 receipt와 effect ledger는 **회차 전체 보존**한다. Day 경계 정리는 폐기한다. terminal 동일 재전송은 duplicate, 새 요청은 거부한다. checkpoint 전이만 snapshotRevision을 증가시키고 snapshot 투영은 순수하다.
+- Slice 2 함께 공부 실행·level 3 슬롯 소비 복습·source studyTogether fixture는 금지한다. 무료 복습은 상승 출처를 덮어쓰지 않는다.
+- 실제 localStorage·Meta는 Slice 3, 실제 시험은 후속 범위다. test-only 점수 경계는 production graph에서 격리한다.
+- 상태: **PM 계약 수정 반영 / QA 재검토 필요 / 구현 미승인·NOT TESTED**. 아래 036의 옛 receipt·2.2 저장·2.8 타입·7절 fixture는 후속 계약에 의해 대체된 이력이다.
+
+## 보존 원안 / 2026-09-28 / 구현 근거 아님
+
 - **상태:** `DESIGN PROPOSAL / 구현 승인 아님`
 - **범위:** Slice 0~2 상태 계약과 Slice 3 저장 연결점
 - **작성일:** 2026-09-28

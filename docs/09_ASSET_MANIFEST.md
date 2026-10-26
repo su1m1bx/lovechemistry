@@ -6,6 +6,8 @@
 
 **적용 단계:** Slice 0~2 가상 자산, 후속 실제 자산 통합
 
+**현행 보완:** 결정 051·052와 `docs/15_IMPLEMENTATION_CONTRACT.md` 5절. 자산 입력·실패 경계의 PM 수정 계약이며 QA 재검토·구현 실행은 아직 없다.
+
 ## 1. 목적과 경계
 
 화면과 콘텐츠가 파일명 대신 안정된 논리 자산 ID를 사용하도록 매니페스트, 경로, fallback의 책임을 정한다. 이 계약은 자산 제작 승인, 캐릭터 외형 확정, 실제 이미지 추가 또는 preload 승인이 아니다.
@@ -59,6 +61,8 @@ Slice 0 홈 갤러리는 카탈로그가 없으면 정상 빈 상태다. 가짜 
 - `.`·`..` 경로 구간과 역슬래시
 - 저장소명 또는 Vite `base`의 중복 저장
 
+실제 파일 path의 각 segment는 `[A-Za-z0-9_-]+`와 그 뒤 선택적인 `.[A-Za-z0-9_-]+` 반복만 허용한다. 마지막 segment는 선언 format의 확장자를 가진 파일이어야 한다. `%`·공백·비ASCII·제어문자·빈/점/연속 점 segment·선행/후행 점을 금지한다. decode·trim·case-fold 등으로 잘못된 입력을 고쳐 수용하지 않는다. `%2e%2e`, `%2E.`, `.%2e`, `%252e%252e`, `%2f`, `%5c`는 URL 생성 전에 거부한다. 이는 파일 경로 정책이며 사용자 이름의 Unicode 허용은 바꾸지 않는다.
+
 ## 4. Vite base, public, resolver 책임
 
 V1 Vite `base`는 `./`로 승인한다. 매니페스트는 이 값을 저장하지 않는다.
@@ -81,6 +85,8 @@ const assetUrl = new URL(validatedPath, appBaseUrl)
 ```
 
 `BASE_URL='./'`에서 `https://example.test/LoveChemistry/`와 `https://example.test/LoveChemistry/index.html?x=1#top`의 `assets/ui/a.webp`는 모두 `https://example.test/LoveChemistry/assets/ui/a.webp`로 해석한다. `https://example.test/`에서는 `https://example.test/assets/ui/a.webp`다. 빈 path, duplicate slash, trailing slash도 3절의 금지 입력과 함께 거부한다. 대소문자를 변환하지 않고 manifest path와 build artifact를 문자 단위 exact case로 비교한다.
+
+실제 저장소의 소문자 document `https://example.test/lovechemistry/`와 `https://example.test/lovechemistry/index.html?x=1#top`도 `https://example.test/lovechemistry/assets/ui/a.webp`로 해석해야 한다. URL 생성 뒤 같은 origin·정확한 `appBaseUrl.pathname + 'assets/'` 하위 pathname·빈 search/hash를 추가 검증한다. `<base>` 태그는 사용하지 않고 document base는 부트에서 주입한다. resolver는 순수 함수로 검증하며 DOM·현재 route에 의존하지 않는다.
 
 ## 5. 매니페스트 레코드
 
@@ -129,6 +135,8 @@ const assetUrl = new URL(validatedPath, appBaseUrl)
 ## 8. resolver와 fallback
 
 resolver는 ID 선언, 종류, 상태, 상대 경로, 형식, fallback 순환을 검증해 URL 또는 구조화된 가상 fallback을 반환한다. 파일 자동 발견, 해금·스포일러 판정, 게임 상태 변경은 책임지지 않는다.
+
+**검증 경계:** 부트 필수 manifest 자체의 schema·중복 ID·금지 필드·fallback 순환·누락 참조는 앱 시작 차단 오류다. 아래 fallback 표는 이미 유효한 catalog의 소비 요청과 개별 파일 로드에 적용하며 필수 manifest 무효를 정상으로 바꾸지 않는다. Slice 0~2 부트 항목은 전부 `placeholder`, 빈 `associations`, 바이너리 필드 없음이며 숨은 캐릭터·사건 ID나 개수 누설이 없어야 한다. 정상 virtual placeholder는 오류가 아니다. 단일 이미지 실패는 진행을 막지 않고 Science 필수 bundle 실패는 대체값 없이 진행을 막는다.
 
 | 실패 | 처리 |
 |---|---|

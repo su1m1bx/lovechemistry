@@ -1,5 +1,7 @@
 # 상태 및 저장 스키마
 
+> **Slice 0~2 현행 계약:** 결정 022~053, `docs/12_INTEGRATED_DESIGN_V2.md`와 `docs/15_IMPLEMENTATION_CONTRACT.md`를 먼저 적용한다. 아래 완성형 schema·저장 생명주기를 Slice 1에 전부 구현하지 않는다. 현재 receipt는 회차 전체 보존, snapshot 투영은 순수, 학업은 topicProgressById와 topicLastProgressSourceById를 사용하며 studiedTopics는 파생값이다. 실제 localStorage·Meta는 Slice 3까지 유예한다. 수정 계약 QA 재검토·구현 승인은 별도다.
+
 - **상태:** `결정 020·021 APPROVED IMPLEMENTATION DECISION 반영 / 콘텐츠 상세는 PROPOSAL`
 - **버전:** 1.2
 - **작성일:** 2026-09-03

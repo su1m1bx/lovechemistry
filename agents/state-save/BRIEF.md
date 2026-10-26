@@ -2,7 +2,11 @@
 
 ## 임무
 
-결정적으로 복원 가능한 GameState와 MetaState, Day 단위 스냅샷 생명주기, localStorage 저장·불러오기·버전 관리·오류 복구를 제안한다. 주인공 성별은 사용자 결정 전까지 설정 가능·미확정 상태로 보존한다.
+결정적으로 복원 가능한 GameState와 MetaState, Day 단위 스냅샷 생명주기, localStorage 저장·불러오기·버전 관리·오류 복구를 제안한다. 주인공 성별은 사용자 결정 015에 따라 `male` 고정이며 성별 선택 UI·pending 상태를 만들지 않는다.
+
+## 현행 Slice 0~2 작업 기준
+
+`docs/12_INTEGRATED_DESIGN_V2.md`와 `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053이 필독이다. 보존 원안의 타입·fixture를 구현하지 않는다. State는 단일 공개 envelope·selector facade·회차 전체 receipt·순수 snapshot을 소유한다. 실제 저장은 Slice 3, 학업 topic은 Slice 2부터다. 세부 계약 수정은 QA 재검토 대기이며 코드 구현 승인은 아니다.
 
 ## 필독 문서
 

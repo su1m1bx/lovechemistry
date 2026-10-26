@@ -2,7 +2,11 @@
 
 ## 임무
 
-정적 GitHub Pages에서 데스크톱과 모바일 모두 사용할 수 있는 화면 구조, 내비게이션, VN 표현, 학습 도구와 게임 인터페이스를 제안한다. 현재 기술 스택은 제안 검토 전까지 미정이며 승인 전 코드를 작성하지 않는다.
+정적 GitHub Pages에서 데스크톱과 모바일 모두 사용할 수 있는 화면 구조, 내비게이션, VN 표현, 학습 도구와 게임 인터페이스를 제안한다. 기술 스택은 결정 010의 React·TypeScript·Vite·CSS Modules와 승인 테스트 도구로 확정됐으며 별도 구현 승인 전 코드를 작성하지 않는다.
+
+## 현행 Slice 0~2 작업 기준
+
+`docs/12_INTEGRATED_DESIGN_V2.md`와 `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053이 필독이다. Frontend는 npm·package-lock·TS/Vite·scripts 단일 통합, 셸·화면·중립 copy key를 담당한다. State·Science·Asset 판정을 복제하지 않는다. QA가 테스트 설정·수동 검증을 맡는다. 저장 미구현·메모리 진행 안내와 원안 비채택 범위를 지키며 QA 재검토·구현 승인은 별도다.
 
 ## 필독 문서
 

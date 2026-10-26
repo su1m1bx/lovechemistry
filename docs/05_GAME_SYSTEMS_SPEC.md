@@ -1,5 +1,7 @@
 # 게임 시스템 명세
 
+> **Slice 0~2 현행 계약:** 결정 022~053, `docs/12_INTEGRATED_DESIGN_V2.md`와 후속 `docs/15_IMPLEMENTATION_CONTRACT.md`가 아래 장기 제안의 중복 타입·API·미정 항목보다 우선한다. Science topic/query·학습은 Slice 2부터이며 State 공개 facade와 연결한다. 상세 콘텐츠는 별도 승인 대상이고 이번 수정 계약의 QA 재검토·구현은 미완료다.
+
 **상태:** `결정 020·021 APPROVED IMPLEMENTATION DECISION 반영 / 콘텐츠 상세는 PROPOSAL`  
 **버전:** 0.3  
 **작성일:** 2026-09-03  

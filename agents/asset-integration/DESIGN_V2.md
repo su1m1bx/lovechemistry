@@ -1,5 +1,17 @@
 # Asset Integration 2차 설계
 
+## 현행 작업 계약 / 2026-10-26
+
+- `docs/09_ASSET_MANIFEST.md`, `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`와 결정 047~053을 따른다. 아래 보존 원안의 path·fallback·변경 후보는 배경 이력이다.
+- manifest·순수 resolver의 단일 소유자는 Asset이다. Frontend는 결과만 렌더링하고 QA는 경로·상태 불변·스포일러를 검증한다.
+- Slice 0~2는 바이너리 없는 generic virtual placeholder만 사용한다. 부트 manifest는 placeholder 상태·빈 associations·경로/형식/치수 없음이 필수이며 숨은 인물·사건 개수를 암시하지 않는다.
+- 실제 path는 assets/ 아래 ASCII segment·선언 확장자 allow-list를 검사한다. `%`·연속 점·절대 경로 등은 URL 생성 전에 거부하고 decode·trim·대소문자 교정으로 살리지 않는다.
+- 두 단계 URL 해석은 유지하고 최종 same-origin·앱 assets/ 하위 pathname·빈 query/hash를 검증한다. 소문자 실제 저장소·대문자 예시·root·index/query/hash oracle을 사용한다.
+- 부트 manifest 무효는 blocked, 정상 placeholder는 무요청 정상, 미등록 소비 요청·실제 이미지 실패는 국소 fallback이다. 과학 필수 무효에는 이미지 fallback을 적용하지 않는다.
+- 실제 자산 승인·비율·preload·이미지 생성은 유예한다. 상태: **PM 계약 수정 반영 / QA 재검토 필요 / 구현 미승인·NOT TESTED**.
+
+## 보존 원안 / 2026-09-28 / 구현 근거 아님
+
 **상태:** `PROPOSAL / 설계 전용 / 구현 미승인`  
 **작성일:** 2026-09-28  
 **대상 단계:** Slice 0~2  

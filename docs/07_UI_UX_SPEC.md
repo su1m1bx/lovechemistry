@@ -1,5 +1,7 @@
 # UI/UX 명세
 
+> **Slice 0~2 현행 계약:** `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 022~053이 아래 장기 화면·저장 제안보다 우선한다. Slice 0은 이름 검증·빈 갤러리만, Slice 1~2는 명시적 개발 검증용 메모리 진행만 제공한다. 공통 envelope·selector·중립 문구·설정 및 검증 담당은 docs/15를 따른다. 새 계약은 QA 재검토 필요·구현 미승인이다.
+
 **상태:** `APPROVED IMPLEMENTATION DECISION 반영 / 콘텐츠 상세는 PROPOSAL`  
 **버전:** 0.3  
 **작성일:** 2026-09-03  

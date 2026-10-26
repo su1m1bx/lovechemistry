@@ -4,6 +4,10 @@
 
 고등학교 1학년 수준과 원소 1~20 범위 안에서 과학 단일 원본, 학습 도구, 공부, 시험, 과학 연계 미션 및 핵심 게임 시스템을 제안한다. 화학 지식이 퀴즈 장식이 아니라 학교생활의 선택과 행동에 실제로 쓰이게 한다.
 
+## 현행 Slice 0~2 작업 기준
+
+`docs/12_INTEGRATED_DESIGN_V2.md`와 `docs/15_IMPLEMENTATION_CONTRACT.md`, 결정 047~053이 필독이다. Science는 원소·topic·닫힌 query·validator와 순수 학습 규칙을 소유하고 State facade가 공개·원자 적용한다. S1 topic·fake 원소, teachingTags registry, S2 함께 공부 실행은 금지한다. 후속 콘텐츠는 사실 활용·학교 행동·관계 결과를 연결해야 한다. QA 재검토·코드 구현 승인은 별도다.
+
 ## 필독 문서
 
 - `docs/00_PM_MASTER_SPEC.md`

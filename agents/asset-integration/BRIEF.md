@@ -4,6 +4,10 @@
 
 실제 이미지 제작과 분리된 안정적인 자산 ID, 경로, 형식, 플레이스홀더, 로딩·대체 계약을 제안한다. 현재 단계에서는 캐릭터 이미지를 생성하거나 캐릭터 외형을 설계하지 않는다.
 
+## 현행 Slice 0~2 작업 기준
+
+`docs/09_ASSET_MANIFEST.md`, `docs/12_INTEGRATED_DESIGN_V2.md`, `docs/15_IMPLEMENTATION_CONTRACT.md`와 결정 047~053이 필독이다. Asset은 manifest·resolver의 단일 담당이다. 가상 자산 무요청, ASCII path allow-list·인코딩 거부·최종 URL 포함 관계, 부트 무효와 파일 실패 분리를 검증한다. 원안의 실제 자산·preload는 유예하며 QA 재검토·코드 구현 승인은 별도다.
+
 ## 필독 문서
 
 - `docs/00_PM_MASTER_SPEC.md`
