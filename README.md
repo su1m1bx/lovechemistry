@@ -27,6 +27,7 @@ GitHub 저장소: https://github.com/su1m1bx/lovechemistry
 - 기존 QA 문서 검토 결과(결정 022~046 범위): `agents/qa/DESIGN_V2_REVIEW.md`
 - 진행 현황 기록: `docs/13_PROGRESS.md`
 - 구현 준비 충돌 점검: `docs/14_CONFLICT_REVIEW.md`
+- 사용자 플레이 구상 대조·체크리스트: `docs/16_USER_SCENARIO_REVIEW.md`
 - 역할별 작업 지침: `agents/*/BRIEF.md`
 
 `docs/00_PM_MASTER_SPEC.md`의 `LOCKED` 규칙은 사용자 승인 없이 변경할 수 없습니다. 구현 편의, UI 편의, 서사 편의를 이유로 잠금 규칙을 임의로 수정하지 않습니다.
