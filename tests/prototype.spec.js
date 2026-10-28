@@ -40,6 +40,35 @@ async function toLab(page, attitude = 0, review = 0) {
   await pick(page, 1); await pick(page, review);
   await expect(page.locator('.scene-id')).toHaveText('C-02');
 }
+
+for (const [place, label] of [[3, '도서관'], [0, '옥상']]) test(`점심 위치 표시: 전날 ${label} → 다음 날 선택 전·후 및 저장 복원`, async ({ page }) => {
+  const location = async expected => {
+    await expect(page.locator('.day-strip span').nth(1)).toHaveText(expected);
+    await expect(page.locator('.location-label')).toHaveText(expected);
+  };
+  const restore = async expected => {
+    const before = await saved(page);
+    await page.reload();
+    await page.getByRole('button', { name: '불러오기', exact: true }).click();
+    await location(expected);
+    expect(await saved(page)).toEqual(before);
+  };
+  await start(page);
+  await pick(page, 0); await pick(page, 0); await pick(page, 0);
+  await expect(page.locator('.scene-id')).toHaveText('A-04');
+  await location('장소 선택');
+  await pick(page, place); await location(label);
+  await pick(page, 2); await pick(page, 0);
+  await pick(page, 0); await pick(page, 0); await pick(page, 0);
+  await expect(page.locator('.scene-id')).toHaveText('B-04');
+  await location('장소 선택');
+  await restore('장소 선택');
+  await pick(page, 1); await location('복도');
+  await restore('복도');
+  await pick(page, 0);
+  await expect(page.locator('.scene-id')).toHaveText('B-04-talk');
+  await location('복도');
+});
 async function measure(page, sample, restore = false) {
   const labels = { solid: '건조한 고체 식염', water: '순수한 물', salt: '식염수' };
   await expect(page.getByRole('button', { name: '측정', exact: true })).toBeDisabled();
