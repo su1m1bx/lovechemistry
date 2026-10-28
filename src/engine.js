@@ -157,7 +157,7 @@ export function metadata(s) {
   const id = s.scene;
   const day = id.startsWith('A') ? 1 : 2;
   const time = id.startsWith('C') || id.includes('05') || id === 'end' ? '방과후' : id.includes('01') ? '아침' : id.includes('02') ? '수업' : id.includes('03') ? '쉬는 시간' : '점심 · 급식 뒤';
-  const location = id.startsWith('C') ? id === 'C-07' ? '과학실 문 앞' : '과학실 · 가상 실험' : id.includes('04') ? s.place || '장소 선택' : id === 'A-01' || id === 'A-05' ? '교실 앞 복도' : '교실';
+  const location = id === 'end' ? '귀가 · 시제품 종료' : id.startsWith('C') ? id === 'C-07' ? '과학실 문 앞' : '과학실 · 가상 실험' : id.includes('04') ? s.place || '장소 선택' : id === 'A-05' && s.events.hTogether ? '과학실 · 자료 열람 좌석' : id === 'A-03' ? '교실 문가 · 층 복도' : id === 'A-01' || id === 'A-05' ? '교실 앞 복도' : '교실';
   return { day, time, location, title: title(id.slice(0, 4)) };
 }
 export function decodeSave(raw) {
