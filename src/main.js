@@ -1,13 +1,16 @@
 import './style.css';
-import { fresh, advance, options, metadata, samples, measured, labAction, decodeSave } from './engine.js';
+import { fresh, advance, options, metadata, samples, measured, labAction, decodeSave, enter as enterScene } from './engine.js';
 import { CHARACTERS, RULES, SAVE_KEY, README_URL } from './config.js';
 import { NOTES, choiceText, title } from './script.js';
+import { PEOPLE, MET_EVENTS, PERIOD_NOTES, EXAM, SNAPS } from './period.js';
+import { examAnswer, submitExam, finishExam } from './extension.js';
 
 const app = document.querySelector('#app');
 let state = null;
 let screen = 'title';
 let message = '';
 let panel = '';
+const failedSnapImages = new Set();
 const el = (tag, text, cls) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -46,7 +49,7 @@ function topbar() {
 function titleScreen(main) {
   main.className = 'title-screen';
   const intro = el('section', undefined, 'intro');
-  intro.append(el('p', 'A SMALL SCHOOL STORY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('p', '같은 자료를, 서로 다른 마음으로.\n새로운 학교에서 시작하는 짧은 두 날의 이야기.', 'subtitle'), el('p', '첫 시제품 · 1~2일차 대표 구간', 'edition'));
+  intro.append(el('p', 'A SMALL SCHOOL STORY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('p', '같은 자료를, 서로 다른 마음으로.\n새로운 학교에서 첫 시험까지 이어지는 이야기.', 'subtitle'), el('p', '1~10일차 · 첫 시험까지', 'edition'));
   const card = el('section', undefined, 'menu-card');
   card.append(el('span', '01 — 처음 만나는 학교', 'eyebrow'), el('h2', '이야기를 시작할까요?'));
   card.append(button('새 게임', () => { screen = 'name'; message = ''; }, false, 'primary'), button('불러오기', load));
@@ -67,14 +70,14 @@ function notebook() {
   const box = el('aside', undefined, 'panel'); box.append(el('h2', panel === 'notes' ? '받은 핵심 노트' : '선택과 실제 경험'), button('닫기', () => { panel = ''; }));
   if (panel === 'notes') {
     if (!state.notes.length) box.append(el('p', '아직 받은 핵심 노트가 없습니다.'));
-    state.notes.forEach(n => box.append(el('h3', n === 'A-02' ? `원소와 물질 · ${state.events.noteStyle || '수업'}` : '이온·화합물과 전도성'), el('p', NOTES[n], 'pre')));
+    state.notes.forEach(n => box.append(el('h3', n === 'A-02' ? `원소와 물질 · ${state.events.noteStyle || '수업'}` : n === 'B-02' ? '이온·화합물과 전도성' : `${Number(n.match(/\d+/)[0])}일차 핵심 노트`), el('p', NOTES[n] || PERIOD_NOTES[n], 'pre')));
   } else {
     box.append(el('h3', '만난 사람'));
-    const encounters = [['hMet', '수소 · 학교 안내'], ['carbonMet', '탄소 · 게시판 홍보물 이야기'], ['naMet', '나트륨 · 급식 게시판에서의 인사']];
+    const encounters = Object.entries(PEOPLE).map(([code, name]) => [MET_EVENTS[code], `${name} · ${code === 'H' ? '학교 안내' : code === 'C' ? '게시판 홍보물 이야기' : code === 'NA' ? '급식 게시판에서의 인사' : '직접 인사를 나눔'}`]);
     encounters.filter(([event]) => state.events[event]).forEach(([, text]) => box.append(el('p', text)));
     box.append(el('h3', '대화와 선택한 행동'));
     const list = el('dl');
-    Object.entries(state.choices).forEach(([key, value]) => {
+    Object.entries(state.choices).filter(([key]) => /^[ABC]-/.test(key)).forEach(([key, value]) => {
       const scene = key.slice(0, 4);
       const day = key.startsWith('A') ? '1일차' : '2일차';
       let text;
@@ -87,6 +90,8 @@ function notebook() {
     });
     if (!list.children.length) list.append(el('dd', '아직 선택한 대화나 행동이 없습니다.'));
     box.append(list);
+    state.period.history.forEach(h => box.append(el('p', `${h.day}일차 · ${h.who} · ${h.title}\n${h.text}`, 'pre')));
+    if (state.exam.result) box.append(el('h3', '첫 시험 결과'), el('p', `10일차 · ${state.exam.result.score}/100점`));
     const memories = [
       ['recordTaste', '수소가 좋아하는 중고 음반 가게와 버스 정류장 이야기를 나눴다.'],
       ['naSchedule', '나트륨이 방과후에 학교 시뮬레이터를 사용할 일정을 들었다.'],
@@ -133,29 +138,68 @@ function experiment() {
 }
 function playScreen(main) {
   main.className = 'play-screen'; const meta = metadata(state);
-  const strip = el('section', undefined, 'day-strip'); strip.append(el('strong', `DAY 0${meta.day}`), el('span', meta.time), el('span', meta.location), el('span', state.scene, 'scene-id')); main.append(strip);
+  const strip = el('section', undefined, 'day-strip'); strip.append(el('strong', `DAY ${String(meta.day).padStart(2, '0')}`), el('span', meta.time), el('span', meta.location), el('span', state.scene, 'scene-id')); main.append(strip);
   const affinity = el('details', undefined, 'affinity'); affinity.append(el('summary', `호감도 · 수소 ${state.affinity['수소']} / 나트륨 ${state.affinity['나트륨']} / 탄소 ${state.affinity['탄소']}`));
   const meters = el('div', undefined, 'meters'); CHARACTERS.forEach(c => { const item = el('div'); const stage = RULES.stages.find(([n]) => state.affinity[c] >= n)[1]; item.append(el('span', `${c} · ${state.affinity[c]}/${RULES.max} · ${stage}`)); const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`); item.append(meter); meters.append(item); }); affinity.append(meters); main.append(affinity);
   if (panel) main.append(notebook());
   const current = state.queue[state.index];
   const stage = el('section', undefined, 'stage'); stage.setAttribute('aria-label', '캐릭터 영역');
-  const cast = state.scene.startsWith('C') && state.scene !== 'C-summary' ? '나트륨' : state.scene === 'B-03' ? '탄소' : state.scene === 'B-04-talk' ? '나트륨' : state.scene.startsWith('A') && (!state.scene.startsWith('A-04') || state.place === '도서관') || state.scene === 'B-01' ? '수소' : '';
+  const cast = meta.cast.join(' · ');
   stage.append(el('span', meta.location, 'location-label'));
   const portrait = el('div', undefined, 'portrait'); portrait.setAttribute('aria-label', cast ? `${cast} 이미지 영역 (비어 있음)` : '빈 이미지 영역'); stage.append(portrait);
   stage.append(el('span', cast || '플레이어', 'character-name'), el('span', '캐릭터 이미지 미포함', 'image-note')); main.append(stage);
+  if (state.scene === 'EX-PAPER' || state.scene === 'EX-RESULT') { main.append(examScreen()); return; }
+  if (current?.snap) { main.append(snapScreen(current)); return; }
   const dialogue = el('section', undefined, 'dialogue'); dialogue.setAttribute('aria-label', '대사창');
-  const who = current?.who || (state.scene === 'end' ? '시제품 종료' : state.lab.task ? '가상 실험' : '선택');
+  const who = current?.who || (state.scene === 'DAY11-HANDOFF' ? '이번 버전의 범위 종료' : state.lab.task ? '가상 실험' : '선택');
   dialogue.append(el('h2', who.startsWith('플레이어') ? `${state.name}${who.includes('독백') ? ' · 독백' : ''}` : who, 'speaker'));
-  const text = current?.text || (state.scene === 'end' ? '대표 구간이 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
+  const text = current?.text || (state.scene === 'DAY11-HANDOFF' ? '1~10일차 제공 범위가 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
   dialogue.append(el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text'));
   if (current) dialogue.append(button('다음 ▸', () => { advance(state); message = ''; }, false, 'next'));
   else {
     const choices = el('div', undefined, 'choices'); options(state).forEach(({ label, run, disabled }, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${label}`, () => { run(); message = ''; }, disabled)));
     dialogue.append(choices);
-    if (state.scene === 'end') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
+    if (state.scene === 'DAY11-HANDOFF') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
   }
   main.append(dialogue);
   if (state.scene.startsWith('C') && state.scene !== 'C-07') main.append(experiment());
+}
+function snapScreen(current) {
+  const snap = SNAPS[current.snap];
+  const box = el('section', undefined, 'dialogue snap'); box.setAttribute('aria-label', '이벤트 스냅');
+  box.append(el('p', '함께 보낸 순간', 'eyebrow'), el('h2', snap.name), el('p', snap.description));
+  if (!failedSnapImages.has(current.snap)) {
+    const image = el('img'); image.src = snap.image; image.alt = snap.description; image.style.maxWidth = '100%';
+    image.addEventListener('error', () => { failedSnapImages.add(current.snap); if (state.queue[state.index]?.snap === current.snap) render(); });
+    box.append(image);
+  } else box.append(el('p', '이미지 준비 중 · 장면 설명으로 표시합니다. 계속 진행할 수 있습니다.', 'muted'));
+  box.append(button('스냅 닫고 계속', () => advance(state), false, 'next')); return box;
+}
+function examScreen() {
+  const box = el('section', undefined, 'dialogue exam'); box.setAttribute('aria-label', '첫 시험');
+  const exam = state.exam;
+  if (state.scene === 'EX-RESULT') {
+    box.append(el('h2', `첫 시험 결과 · ${exam.result.score}/100점`));
+    EXAM.forEach((q, i) => {
+      const answer = exam.result.details[i].answer;
+      box.append(el('h3', `${i + 1}. ${q.prompt}`), el('p', `제출 답: ${answer === null ? '미응답' : q.options[answer]} · ${exam.result.details[i].points}점`), el('p', `정답: ${q.options[q.correct]}\n해설: ${q.explanation}`, 'pre'));
+    });
+    box.append(button('결과 확인 · 시험 후 일과로', () => { finishExam(state, enterScene); save(); }, false, 'primary'));
+  } else {
+    const q = EXAM[exam.index];
+    box.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.', 'muted'), el('h3', q.prompt));
+    const answers = el('fieldset'); answers.append(el('legend', '답안 선택'));
+    q.options.forEach((text, i) => {
+      const label = el('label', undefined, 'exam-option');
+      const radio = el('input'); radio.type = 'radio'; radio.name = q.id; radio.value = i; radio.checked = exam.answers[exam.index] === i;
+      radio.addEventListener('change', () => examAnswer(state, exam.index, i));
+      label.append(radio, el('span', text)); answers.append(label);
+    }); box.append(answers);
+    box.append(button('이전 문항', () => { exam.index--; }, exam.index === 0), button('다음 문항', () => { exam.index++; }, exam.index === EXAM.length - 1));
+    box.append(el('p', `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`));
+    box.append(button('답안 제출', () => { submitExam(state, enterScene); save(); }, false, 'primary'));
+  }
+  return box;
 }
 function render() {
   const focusedLabel = document.activeElement?.textContent;

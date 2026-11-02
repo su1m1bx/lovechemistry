@@ -29,8 +29,8 @@ async function toLunch2(page, { place = 3, action = 0, companion = 1, alternate 
   await pick(page, alternate ? 1 : 0); // B-02
   await pick(page, alternate ? 1 : 0); // B-03
   await expect(page.locator('.scene-id')).toHaveText('B-04');
-  await expect(page.locator('.choices button:disabled')).toHaveCount(4);
-  await expect(page.locator('.choices button:disabled').first()).toContainText('미구현');
+  await expect(page.locator('.choices button:disabled')).toHaveCount(0);
+  await expect(page.locator('.choices')).not.toContainText('미구현');
   await pick(page, 1);
 }
 async function toLab(page, attitude = 0, review = 0) {
@@ -100,9 +100,9 @@ test('대표 정상 경로, 각 상태의 저장 복원, 별도 재측정과 종
   await pick(page, 0); await measure(page, 'salt');
   await pick(page, 0); await expect(page.locator('.dialogue-text')).toContainText('어떻게 할까?');
   await pick(page, 0); await pick(page, 0);
-  s = await saved(page); expect(s.scene).toBe('end'); expect(s.affinity['수소']).toBe(15); expect(s.affinity['나트륨']).toBe(10); expect(s.affinity['탄소']).toBe(5);
+  s = await saved(page); expect(s.scene).toBe('D3-RECESS'); expect(s.affinity['수소']).toBe(9); expect(s.affinity['나트륨']).toBe(6); expect(s.affinity['탄소']).toBe(3);
   expect(s.lab.observations).toHaveLength(4); expect(s.events.experimentCompleted).toBe(true);
-  await expect(page.locator('.dialogue')).toContainText('대표 구간이 끝났습니다'); expect(errors).toEqual([]);
+  await expect(page.locator('.day-strip')).toContainText('DAY 03'); expect(errors).toEqual([]);
 });
 
 for (const action of [1, 2]) test(`공부·스킵 ${action}: 인사·동행 없이 종료, 보너스 없음`, async ({ page }) => {
@@ -110,14 +110,14 @@ for (const action of [1, 2]) test(`공부·스킵 ${action}: 인사·동행 없�
   const before = await saved(page);
   expect(before.events.recordTaste).toBeUndefined(); expect(before.events.naMet).toBeUndefined(); expect(before.affinity['수소']).toBe(0);
   await expect(page.locator('.choices button')).toHaveCount(1); await pick(page, 0);
-  const after = await saved(page); expect(after.scene).toBe('end'); expect(after.lab.observations).toEqual([]); expect(after.events.experimentCompleted).toBeUndefined();
+  const after = await saved(page); expect(after.scene).toBe('D3-RECESS'); expect(after.lab.observations).toEqual([]); expect(after.events.experimentCompleted).toBeUndefined();
 });
 
 for (const scenario of [
   { first: 0, attitude: 1, extra: 1, interpretation: 1, end: 0, expected: 0 },
   { first: 1, attitude: 0, extra: 2, interpretation: 2, end: 1, expected: 0 },
-  { first: 1, attitude: 2, extra: 1, interpretation: 0, end: 1, expected: 5 },
-  { first: 0, attitude: 0, extra: 1, interpretation: 2, end: 2, expected: 5 },
+  { first: 1, attitude: 2, extra: 1, interpretation: 0, end: 1, expected: 3 },
+  { first: 0, attitude: 0, extra: 1, interpretation: 2, end: 2, expected: 3 },
   { first: 1, attitude: 1, extra: 2, interpretation: 1, end: 2, expected: 0 },
 ]) test(`실험 분기 ${JSON.stringify(scenario)}`, async ({ page }) => {
   const c = scenario; await toLab(page, c.attitude, 1);
@@ -128,8 +128,8 @@ for (const scenario of [
   expect(after.affinity).toEqual(before.affinity); expect(after.lab.observations).toEqual(before.lab.observations);
   expect(after.lab.observations).toHaveLength(2);
   await pick(page, 0); await pick(page, c.end);
-  const s = await saved(page); expect(s.scene).toBe('end'); expect(s.affinity['나트륨']).toBe(c.expected);
-  if (c.attitude === 1) { expect(s.events.takeover).toBe(true); expect(s.applied['B-04-talk']).toMatchObject({ requested: -5, actual: 0 }); }
+  const s = await saved(page); expect(s.scene).toBe('D3-RECESS'); expect(s.affinity['나트륨']).toBe(c.expected);
+  if (c.attitude === 1) { expect(s.events.takeover).toBe(true); expect(s.applied['B-04-talk']).toMatchObject({ requested: -4, actual: 0 }); }
   if (c.extra === 2) expect(s.events.dismiss).toBe(true);
   if (c.attitude === 1 || c.extra === 2) expect(s.applied['C-07'].requested).toBe(0);
 });
@@ -151,7 +151,7 @@ test('동일 선택 지점 중복 점수 방지와 날짜별 사건 분리', asy
     enter(s, 'B-01'); while (s.index < s.queue.length) advance(s); options(s)[1].run();
     return { once, total: s.affinity['수소'], keys: Object.keys(s.applied), choices: s.choices };
   });
-  expect(result.once).toBe(5); expect(result.total).toBe(10); expect(result.keys).toEqual(['A-01', 'B-01']); expect(result.choices['A-01']).toBe(1);
+  expect(result.once).toBe(3); expect(result.total).toBe(6); expect(result.keys).toEqual(['A-01', 'B-01']); expect(result.choices['A-01']).toBe(1);
 });
 
 test('모바일, 손상 저장, 저장 실패, 이름의 HTML 안전성', async ({ page }) => {
@@ -177,7 +177,7 @@ test('물부터 → 고체 → 식염수, 재측정만 보류하고 무례 없�
   await pick(page, 0); await measure(page, 'salt');
   await pick(page, 1); await pick(page, 0); await pick(page, 0);
   await pick(page, 1); const s = await saved(page);
-  expect(s.events.dismiss).toBe(false); expect(s.affinity['나트륨']).toBe(10); expect(s.lab.observations).toHaveLength(3);
+  expect(s.events.dismiss).toBe(false); expect(s.affinity['나트륨']).toBe(6); expect(s.lab.observations).toHaveLength(3);
 });
 
 test('모바일 실험 화면과 관찰 기록 레이아웃', async ({ page }, testInfo) => {

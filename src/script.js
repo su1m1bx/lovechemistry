@@ -1,7 +1,8 @@
 import source from '../docs/story.md?raw';
+export { source };
 
 // 대본의 원문을 사용한다. 장면 ID / 표의 행 번호는 서사상의 선택 지점이다.
-const sections = Object.fromEntries([...source.matchAll(/#### ([ABC]-\d\d) — ([^\n]+)\n([\s\S]*?)(?=\n#### |\n### |$)/g)]
+export const sections = Object.fromEntries([...source.matchAll(/#### ([A-Z0-9-]+) — ([^\n]+)\n([\s\S]*?)(?=\n#### |\n### |$)/g)]
   .map(([, id, title, body]) => [id, { title, body }]));
 export function rows(id, table = 0) {
   const tables = sections[id].body.match(/(?:^\|.*\n?)+/gm) || [];
@@ -20,3 +21,4 @@ export const lines = (...text) => text.flat().flatMap(speech);
 export const dialogue = id => lines(prose(id));
 export const choiceText = (id, row, table = 0) => rows(id, table)[row][0].replaceAll('‘', '').replaceAll('’', '');
 export const reaction = (id, row, table = 0) => lines(rows(id, table)[row][1]);
+export const sceneText = id => sections[id]?.body || '';
