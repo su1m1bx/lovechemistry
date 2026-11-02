@@ -188,3 +188,56 @@ test('모바일 실험 화면과 관찰 기록 레이아웃', async ({ page }, t
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('mobile-experiment.png'), fullPage: true });
 });
+
+test('시작 화면과 플레이 중 도움말은 기본 GitHub README를 연다', async ({ page, context }) => {
+  const url = 'https://github.com/su1m1bx/lovechemistry#readme';
+  await context.route('https://github.com/su1m1bx/lovechemistry', route => route.fulfill({ body: '<title>README</title>', contentType: 'text/html' }));
+  const checkHelp = async name => {
+    const opened = context.waitForEvent('page');
+    await page.getByRole('button', { name, exact: true }).click();
+    const popup = await opened;
+    await popup.waitForLoadState('domcontentloaded');
+    expect(popup.url()).toBe(url);
+    expect(await popup.evaluate(() => window.opener)).toBeNull();
+    await popup.close();
+  };
+  await page.goto('/');
+  await checkHelp('도움말 · GitHub README ↗');
+  await start(page);
+  await checkHelp('도움말 ↗');
+});
+
+test('기록은 만남·무례한 대화·실측 결과를 읽기 쉽게 보여 주고 저장 상태를 유지한다', async ({ page }) => {
+  await toLab(page, 1);
+  await pick(page, 0); await measure(page, 'solid');
+  const before = await saved(page);
+  await page.getByRole('button', { name: '기록', exact: true }).click();
+  const panel = page.locator('.panel');
+  await expect(panel).toContainText('수소 · 학교 안내');
+  await expect(panel).toContainText('나트륨 · 급식 게시판에서의 인사');
+  await expect(panel).toContainText('나트륨에게 설명을 듣기보다 내가 대신 쓰겠다고 말했다.');
+  await expect(panel).toContainText('1번째 측정 · 건조한 고체 식염: 꺼짐');
+  await expect(panel).toContainText('순수한 물: 미측정');
+  await expect(panel).toContainText('식염수: 미측정');
+  await expect(panel).not.toContainText(/A-0|B-0|C-0|hMet|naMet|takeover|requested|actual|true|false|\{|\}/);
+  await expect(panel.locator('pre')).toHaveCount(0);
+  const text = await panel.textContent();
+  expect(await saved(page)).toEqual(before);
+  await page.reload(); await page.getByRole('button', { name: '불러오기', exact: true }).click();
+  await page.getByRole('button', { name: '기록', exact: true }).click();
+  expect(await panel.textContent()).toBe(text);
+  expect(await saved(page)).toEqual(before);
+});
+
+test('비대면 점심 기록에 경험하지 않은 만남과 실험을 표시하지 않는다', async ({ page }) => {
+  await toLunch2(page, { place: 0, action: 2, companion: 0 });
+  await pick(page, 1); await pick(page, 0);
+  const before = await saved(page);
+  await page.getByRole('button', { name: '기록', exact: true }).click();
+  const panel = page.locator('.panel');
+  await expect(panel).toContainText('조용히 쉬기');
+  await expect(panel).toContainText('받은 핵심 노트 다시 읽기');
+  await expect(panel).not.toContainText('나트륨 · 급식 게시판에서의 인사');
+  await expect(panel).not.toContainText('전도성 실험 기록');
+  expect(await saved(page)).toEqual(before);
+});

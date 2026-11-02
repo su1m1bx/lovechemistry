@@ -1,7 +1,7 @@
 import './style.css';
 import { fresh, advance, options, metadata, samples, measured, labAction, decodeSave } from './engine.js';
 import { CHARACTERS, RULES, SAVE_KEY, README_URL } from './config.js';
-import { NOTES } from './script.js';
+import { NOTES, choiceText, title } from './script.js';
 
 const app = document.querySelector('#app');
 let state = null;
@@ -21,7 +21,7 @@ function button(text, run, disabled = false, cls = '') {
 }
 function help() {
   if (README_URL.startsWith('https://github.com/')) window.open(README_URL, '_blank', 'noopener,noreferrer');
-  else message = 'GitHub 원격 주소가 제공되지 않았습니다. 프로젝트 README 링크 설정이 필요합니다.';
+  else message = '도움말 주소를 확인해 주세요. GitHub README 주소가 필요합니다.';
 }
 function load() {
   try {
@@ -69,13 +69,41 @@ function notebook() {
     if (!state.notes.length) box.append(el('p', '아직 받은 핵심 노트가 없습니다.'));
     state.notes.forEach(n => box.append(el('h3', n === 'A-02' ? `원소와 물질 · ${state.events.noteStyle || '수업'}` : '이온·화합물과 전도성'), el('p', NOTES[n], 'pre')));
   } else {
-    box.append(el('p', '관계 단계는 수치 요약입니다. 실제 만남과 대화 기록은 별도로 보관합니다.', 'muted'));
+    box.append(el('h3', '만난 사람'));
+    const encounters = [['hMet', '수소 · 학교 안내'], ['carbonMet', '탄소 · 게시판 홍보물 이야기'], ['naMet', '나트륨 · 급식 게시판에서의 인사']];
+    encounters.filter(([event]) => state.events[event]).forEach(([, text]) => box.append(el('p', text)));
+    box.append(el('h3', '대화와 선택한 행동'));
     const list = el('dl');
     Object.entries(state.choices).forEach(([key, value]) => {
-      const applied = state.applied[key];
-      list.append(el('dt', key), el('dd', `${typeof value === 'number' ? `${value + 1}번 선택` : value}${applied?.who ? ` · ${applied.who} ${applied.actual > 0 ? '+' : ''}${applied.actual} (대본 ${applied.requested > 0 ? '+' : ''}${applied.requested})` : ''}`));
+      const scene = key.slice(0, 4);
+      const day = key.startsWith('A') ? '1일차' : '2일차';
+      let text;
+      if (key.endsWith(':place') && ['A-04', 'B-04'].includes(scene)) text = `${value} 선택`;
+      else if (['A-04-action', 'B-04-action'].includes(key)) {
+        text = value === '공부' ? '받은 핵심 노트 다시 읽기' : value === '스킵' ? '조용히 쉬기' : scene === 'A-04' && state.choices['A-04:place'] !== '도서관' ? '아는 사람이 없어 짧게 둘러보기' : '대화 나누기';
+      } else if (key === 'B-04-talk') text = choiceText('B-04', value, 2);
+      else if (['A-01', 'A-02', 'A-03', 'A-05', 'B-01', 'B-02', 'B-03', 'B-05', 'C-01', 'C-02', 'C-03', 'C-04', 'C-05', 'C-06', 'C-07'].includes(key)) text = choiceText(key, value);
+      if (text) list.append(el('dt', `${day} · ${title(scene)}`), el('dd', text.replaceAll('{플레이어명}', state.name)));
     });
-    box.append(list, el('h3', '경험 기록'), el('pre', JSON.stringify(state.events, null, 2)));
+    if (!list.children.length) list.append(el('dd', '아직 선택한 대화나 행동이 없습니다.'));
+    box.append(list);
+    const memories = [
+      ['recordTaste', '수소가 좋아하는 중고 음반 가게와 버스 정류장 이야기를 나눴다.'],
+      ['naSchedule', '나트륨이 방과후에 학교 시뮬레이터를 사용할 일정을 들었다.'],
+      ['takeover', '나트륨에게 설명을 듣기보다 내가 대신 쓰겠다고 말했다.'],
+      ['dismiss', '나트륨의 추가 측정 제안을 깎아내리는 말을 했다.'],
+      ['experimentCompleted', '측정한 결과와 확인하지 못한 조건을 구분해 정리했다.'],
+    ].filter(([event]) => state.events[event]);
+    if (memories.length) {
+      box.append(el('h3', '기억할 이야기'));
+      memories.forEach(([, text]) => box.append(el('p', text)));
+    }
+    if (state.events.naTogether) {
+      box.append(el('h3', '전도성 실험 기록'));
+      state.lab.observations.forEach((o, i) => box.append(el('p', `${i + 1}번째 측정 · ${samples[o.sample]}: ${o.result}`)));
+      Object.entries(samples).filter(([sample]) => !measured(state, sample)).forEach(([, label]) => box.append(el('p', `${label}: 미측정`)));
+      if (state.events.interpretation) box.append(el('p', `노트와 함께 정리한 해석: ${state.events.interpretation}`));
+    }
   }
   return box;
 }
