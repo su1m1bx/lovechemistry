@@ -1,6 +1,6 @@
 import './style.css';
 import { fresh, advance, options, metadata, samples, measured, labAction, decodeSave, enter as enterScene } from './engine.js';
-import { CHARACTERS, RULES, SAVE_KEY, README_URL } from './config.js';
+import { RULES, SAVE_KEY, README_URL } from './config.js';
 import { NOTES, choiceText, title } from './script.js';
 import { PEOPLE, MET_EVENTS, PERIOD_NOTES, EXAM, SNAPS } from './period.js';
 import { examAnswer, submitExam, finishExam } from './extension.js';
@@ -139,8 +139,12 @@ function experiment() {
 function playScreen(main) {
   main.className = 'play-screen'; const meta = metadata(state);
   const strip = el('section', undefined, 'day-strip'); strip.append(el('strong', `DAY ${String(meta.day).padStart(2, '0')}`), el('span', meta.time), el('span', meta.location), el('span', state.scene, 'scene-id')); main.append(strip);
-  const affinity = el('details', undefined, 'affinity'); affinity.append(el('summary', `호감도 · 수소 ${state.affinity['수소']} / 나트륨 ${state.affinity['나트륨']} / 탄소 ${state.affinity['탄소']}`));
-  const meters = el('div', undefined, 'meters'); CHARACTERS.forEach(c => { const item = el('div'); const stage = RULES.stages.find(([n]) => state.affinity[c] >= n)[1]; item.append(el('span', `${c} · ${state.affinity[c]}/${RULES.max} · ${stage}`)); const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`); item.append(meter); meters.append(item); }); affinity.append(meters); main.append(affinity);
+  if (meta.cast.length) {
+    const affinity = el('section', undefined, 'affinity'); affinity.setAttribute('aria-label', '현재 등장인물 호감도');
+    const meters = el('div', undefined, 'meters');
+    meta.cast.forEach(c => { const item = el('div'); const stage = RULES.stages.find(([n]) => state.affinity[c] >= n)[1]; item.append(el('span', `${c} · ${state.affinity[c]}/${RULES.max} · ${stage}`)); const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`); item.append(meter); meters.append(item); });
+    affinity.append(meters); main.append(affinity);
+  }
   if (panel) main.append(notebook());
   const current = state.queue[state.index];
   const stage = el('section', undefined, 'stage'); stage.setAttribute('aria-label', '캐릭터 영역');
@@ -189,14 +193,17 @@ function examScreen() {
     const q = EXAM[exam.index];
     box.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.', 'muted'), el('h3', q.prompt));
     const answers = el('fieldset'); answers.append(el('legend', '답안 선택'));
+    const count = el('p'); count.setAttribute('aria-live', 'polite');
+    const updateCount = () => { count.textContent = `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`; };
+    updateCount();
     q.options.forEach((text, i) => {
       const label = el('label', undefined, 'exam-option');
       const radio = el('input'); radio.type = 'radio'; radio.name = q.id; radio.value = i; radio.checked = exam.answers[exam.index] === i;
-      radio.addEventListener('change', () => examAnswer(state, exam.index, i));
+      radio.addEventListener('change', () => { examAnswer(state, exam.index, i); updateCount(); });
       label.append(radio, el('span', text)); answers.append(label);
     }); box.append(answers);
     box.append(button('이전 문항', () => { exam.index--; }, exam.index === 0), button('다음 문항', () => { exam.index++; }, exam.index === EXAM.length - 1));
-    box.append(el('p', `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`));
+    box.append(count);
     box.append(button('답안 제출', () => { submitExam(state, enterScene); save(); }, false, 'primary'));
   }
   return box;

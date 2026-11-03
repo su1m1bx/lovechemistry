@@ -2,6 +2,7 @@ import { RULES, CHARACTERS } from './config.js';
 import { dialogue, lines, reaction, choiceText, NOTES, title } from './script.js';
 import { initPeriod, markCurrent, periodScene, periodOptions } from './extension.js';
 import { PERIOD_NOTES, MET_EVENTS, PEOPLE, EXAM, EXAM_POINTS, SNAPS } from './period.js';
+import { presentCast, repairPresentation, NA_SCHEDULE_TEXT } from './presentation.js';
 
 const LEGACY_SCENES = {
   'A-01': [1, '아침', '교실 앞 복도', ['H']], 'A-02': [1, '수업', '교실', ['H']],
@@ -32,11 +33,11 @@ export function fresh(name) {
 export const rude = s => s.events.takeover || s.events.dismiss;
 export const measured = (s, sample) => s.lab.observations.some(o => o.sample === sample);
 export const missing = s => !measured(s, 'water') ? 'water' : !measured(s, 'solid') ? 'solid' : 'salt';
-const say = (who, text) => ({ who, text });
+const say = (who, text, extra = {}) => ({ who, text, ...extra });
 const na = text => say('나트륨', text);
 const h = text => say('수소', text);
 const me = text => say('플레이어 독백', text);
-function queue(s, q, after = null) { s.queue = q; s.index = 0; s.after = after; markCurrent(s); }
+function queue(s, q, after = null) { s.queue = q; s.index = 0; s.after = after; markCurrent(s); s.cast = presentCast(s); }
 function score(s, key, who, amount) {
   if (Object.hasOwn(s.applied, key)) return;
   const before = who ? s.affinity[who] : 0;
@@ -55,6 +56,7 @@ export function advance(s) {
   if (current?.heard) s.events[current.heard] = true;
   if (s.index < s.queue.length) s.index++;
   markCurrent(s);
+  s.cast = presentCast(s);
   if (s.index === s.queue.length && s.after) {
     const target = s.after; s.after = null; enter(s, target);
   }
@@ -144,13 +146,13 @@ export function options(s) {
     if (i === 1) q.push(...s.notes.map(n => say(`핵심 노트 재열람 · ${n}`, NOTES[n])));
     reply(s, q, first ? 'A-05' : i === 0 ? 'B-04-talk' : 'B-05');
   }));
-  if (id === 'A-05') return tableOptions(s, id, 0, i => choose(i, '수소', 0, [...reaction(id, i), say('장면', i === 0 ? '혼자 교내 동선을 확인하며 귀가한다.' : '담당 교사가 있는 과학실 좌석에서 각자 자료를 보다가 인사하고 귀가한다.')], 'B-01', () => { s.events.hTogether = i === 1; if (i === 1) s.location = '과학실 · 자료 열람 좌석'; }));
+  if (id === 'A-05') return tableOptions(s, id, 0, i => choose(i, '수소', 0, [...reaction(id, i), say('장면', i === 0 ? '혼자 교내 동선을 확인하며 귀가한다.' : '담당 교사가 있는 과학실 좌석에서 각자 자료를 보다가 인사하고 귀가한다.', { cast: i === 0 ? [] : ['H'] })], 'B-01', () => { s.events.hTogether = i === 1; if (i === 1) s.location = '과학실 · 자료 열람 좌석'; }));
   if (id === 'B-01') return standard('B-02', '수소', [0, RULES.up], i => { s.events.mapFeedback = i === 1; });
   if (id === 'B-02') return standard('B-03', null, [], i => { s.events.ionNotation = i === 0; });
   if (id === 'B-03') return standard('B-04', '탄소', [RULES.up, 0]);
-  if (id === 'B-04-talk') return tableOptions(s, 'B-04', 2, i => choose(i, '나트륨', [RULES.up, RULES.disrespect, 0][i], [...reaction('B-04', i, 2), na('저는 방과후 과학실의 학교 시뮬레이터를 쓸 거예요. 고체 식염이랑 물, 식염수를 측정해 보고 설명을 정리하려고요.')], 'B-05', () => { s.events.reader = i === 0; s.events.takeover = i === 1; s.events.recheck = i === 2; s.events.naSchedule = true; }));
-  if (id === 'B-05') return [option('자유 행동 — 혼자 노트를 정리하고 귀가한다.', () => choose(0, null, 0, s.events.naSchedule ? lines('플레이어: “오늘은 따로 정리할게.” 나트륨: “네. 저는 시뮬레이터 써 보고 갈게요.”') : [me('혼자 노트를 정리하고 귀가한다.')], 'end')),
-    ...(s.events.naMet && s.events.naSchedule ? [option('과학실 데이트·나트륨 — 시뮬레이터에서 같이 측정해 볼래? 네 예측도 듣고 싶어.', () => choose(1, '나트륨', 0, [na(s.events.takeover ? '같이 할 수는 있어요. 제 예측도 끝까지 들어 주세요.' : '네. 어떤 조건부터 볼지도 같이 정해요.')], 'C-01', () => { s.events.naTogether = true; }))] : [])];
+  if (id === 'B-04-talk') return tableOptions(s, 'B-04', 2, i => choose(i, '나트륨', [RULES.up, RULES.disrespect, 0][i], [...reaction('B-04', i, 2), say('나트륨', NA_SCHEDULE_TEXT, { displayEvent: 'naSchedule' })], 'B-05', () => { s.events.reader = i === 0; s.events.takeover = i === 1; s.events.recheck = i === 2; }));
+  if (id === 'B-05') return [option('자유 행동 — 혼자 노트를 정리하고 귀가한다.', () => choose(0, null, 0, s.events.naSchedule ? lines('플레이어: “오늘은 따로 정리할게.” 나트륨: “네. 저는 시뮬레이터 써 보고 갈게요.”').map(q => ({ ...q, cast: ['NA'] })) : [me('혼자 노트를 정리하고 귀가한다.')], 'end')),
+    ...(s.events.naMet && s.events.naSchedule ? [option('과학실 데이트·나트륨 — 시뮬레이터에서 같이 측정해 볼래? 네 예측도 듣고 싶어.', () => choose(1, '나트륨', 0, [say('나트륨', s.events.takeover ? '같이 할 수는 있어요. 제 예측도 끝까지 들어 주세요.' : '네. 어떤 조건부터 볼지도 같이 정해요.', { cast: ['NA'] })], 'C-01', () => { s.events.naTogether = true; }))] : [])];
   if (id === 'C-01') return tableOptions(s, id, 0, i => choose(i, '나트륨', 0, [...reaction(id, i), say(i === 0 ? '노트 재확인' : '설명용 입자 모형 · 실제 관측 영상 아님', i === 0 ? NOTES['C-01'] : '고체: [Na⁺ Cl⁻ Na⁺ Cl⁻] 격자에 묶인 이온\n식염수: Na⁺ ↔ Cl⁻ ↔ 물속에서 이동하는 이온\n\n' + NOTES['C-01'])], 'C-02'));
   if (id === 'C-02') return tableOptions(s, id, 0, i => startTask(s, id, i, i === 0 ? 'solid' : 'water', 'C-03', [na(i === 0 ? '예측대로 꺼졌네요. 이온이 없다는 뜻은 아니고요.' : '이 감도에서 꺼짐. 전류가 완전히 0이라고 적진 않을게요.')]));
   if (id === 'C-03') return tableOptions(s, id, 0, i => {
@@ -170,7 +172,7 @@ export function options(s) {
     choose(i, null, 0, q, 'C-summary', () => { s.events.interpretation = ['이온 이동으로 해석', '금속 생성 오해를 정정', '모든 용질로 일반화하지 않음'][i]; });
   });
   if (id === 'C-summary') return [option('기록 확인 · 시뮬레이터 종료', () => { s.events.experimentCompleted = true; enter(s, 'C-07'); })];
-  if (id === 'C-07') return tableOptions(s, id, 0, i => choose(i, '나트륨', i < 2 && !rude(s) ? RULES.up : 0, [na(i === 0 ? rude(s) ? '빵 얘기는 나중에요. 오늘 제가 한 제안도 기억해 주세요.' : '네. 그땐 부스러기 양은 평가에서 빼 주세요.' : i === 1 ? rude(s) ? '취향은 달라도 돼요. 제 의견을 말하는 것도요.' : '그럼 첫 줄부터 다르네요. 다수결로 바삭함을 정하지는 말죠.' : rude(s) ? '네, 먼저 갈게요.' : '네. 선배도요.'), say('장면', '인사하고 귀가한다.')], 'end', () => { s.events.bakeryExchange = i === 0 ? rude(s) ? '남은 거리감' : '이야기 의향' : i === 1 ? '서로 다른 취향' : '방문 약속 없음'; }));
+  if (id === 'C-07') return tableOptions(s, id, 0, i => choose(i, '나트륨', i < 2 && !rude(s) ? RULES.up : 0, [na(i === 0 ? rude(s) ? '빵 얘기는 나중에요. 오늘 제가 한 제안도 기억해 주세요.' : '네. 그땐 부스러기 양은 평가에서 빼 주세요.' : i === 1 ? rude(s) ? '취향은 달라도 돼요. 제 의견을 말하는 것도요.' : '그럼 첫 줄부터 다르네요. 다수결로 바삭함을 정하지는 말죠.' : rude(s) ? '네, 먼저 갈게요.' : '네. 선배도요.'), say('장면', '인사하고 귀가한다.', { cast: [] })], 'end', () => { s.events.bakeryExchange = i === 0 ? rude(s) ? '남은 거리감' : '이야기 의향' : i === 1 ? '서로 다른 취향' : '방문 약속 없음'; }));
   return [];
 }
 function startTask(s, key, value, sample, next, response) {
@@ -195,7 +197,7 @@ export function summary(s) {
     (s.lab.observations.filter(o => o.sample === 'salt').length > 1 ? '별도 식염수 재측정: 켜짐.' : '식염수 재측정: 하지 않음.') + '\n\n식염수의 이온 이동은 시료 정보·노트와 함께 해석한다. 표시등만으로 이온 종류나 금속 존재를 알아낸 것은 아니다. 다른 용질의 전도성, 영양상 적정량, 전극 생성물은 이번 측정으로 확인한 범위가 아니다.';
 }
 export function metadata(s) {
-  return { day: s.day, time: s.time, location: s.location, cast: s.cast.map(c => PEOPLE[c]), title: title(s.scene) };
+  return { day: s.day, time: s.time, location: s.location, cast: presentCast(s).map(c => PEOPLE[c]), title: title(s.scene) };
 }
 export function decodeSave(raw) {
   const s = JSON.parse(raw);
@@ -218,6 +220,8 @@ export function decodeSave(raw) {
     s.exam.submitted && (!s.exam.result || s.exam.result.day !== 10 || !Array.isArray(s.exam.result.details) || s.exam.result.details.length !== EXAM.length ||
       !s.exam.result.details.every((d, i) => d.id === EXAM[i].id && d.answer === s.exam.answers[i] && d.correct === EXAM[i].correct && d.points === (d.answer === d.correct ? EXAM_POINTS : 0)) ||
       s.exam.result.score !== EXAM.reduce((n, q, i) => n + (s.exam.answers[i] === q.correct ? EXAM_POINTS : 0), 0))) throw new Error('지원하지 않거나 손상된 저장 데이터입니다.');
+  repairPresentation(s);
+  s.cast = presentCast(s);
   return s;
 }
 function validScene(id) {

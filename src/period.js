@@ -16,8 +16,8 @@ export const SCHEDULE = {
   10: { 옥상: ['HE'], 복도: ['NA', 'MG'], 교실: ['C'], 도서관: ['H', 'CL'], 운동장: ['CA'] },
 };
 export const MET_EVENTS = { H: 'hMet', HE: 'heMet', C: 'carbonMet', NA: 'naMet', MG: 'mgMet', CA: 'caMet', CL: 'clMet' };
-export const say = (who, text, extra = {}) => ({ who, text, ...extra });
-export const stage = text => say('장면', text);
+export const say = (who, text, extra = {}) => ({ who, text, kind: 'dialogue', ...extra });
+export const stage = text => say('장면', text, { kind: 'narration' });
 export const clean = text => text.replaceAll('**', '').replaceAll('`', '').replace(/^- /, '').trim();
 export const bullets = id => sceneText(id).split('\n').filter(l => l.startsWith('- '));
 export const quotes = text => [...text.matchAll(/“([^”]+)”/g)].map(m => m[1]);

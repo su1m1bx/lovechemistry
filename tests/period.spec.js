@@ -230,6 +230,8 @@ test('스냅 실제 이미지 로드와 실패 대체 모두 진행·점수에 �
   await page.evaluate(([key, s]) => localStorage.setItem(key, JSON.stringify(s)), [SAVE_KEY, seeded]);
   await page.getByRole('button', { name: '불러오기', exact: true }).click();
   await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
+  await expect(page.locator('.speaker')).toHaveText('수소');
+  await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
   await expect(page.locator('.snap img')).toBeVisible();
   expect(await page.locator('.snap img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
   const before = await restore(page);

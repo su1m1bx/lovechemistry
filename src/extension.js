@@ -1,4 +1,5 @@
 import { RULES } from './config.js';
+import { responseLines, heliumReading, chlorineReview, followAction } from './presentation.js';
 import { title } from './script.js';
 import { PEOPLE, PLACES, SCHEDULE, MET_EVENTS, say, stage, bullets, quotes, clean, actorLines,
   dayParts, PERIOD_NOTES, EXAM, EXAM_POINTS, SNAPS, invitation, introduction, meetOptions,
@@ -12,6 +13,7 @@ export function initPeriod(s) {
 }
 export function markCurrent(s) {
   const q = s.queue[s.index]; if (!q) return;
+  if (q.displayEvent) s.events[q.displayEvent] = true;
   if (q.note && !s.notes.includes(q.note)) s.notes.push(q.note);
   if (q.complete) s.period[q.complete.type][q.complete.code] = true;
   if (q.effect) {
@@ -69,7 +71,7 @@ export function periodScene(s, id, api) {
       if (s.events.recordTaste) q.push(say(person, '그 정류장도 적고 싶고.'));
     } else {
       q = actorLines(bullets(id).filter(l => !l.includes('**조건')).join('\n'));
-      if (code === 'HE') q.splice(1, 0, stage('헬륨이 원고를 읽는다. “자료가 필요한 학생은 점심시간이 끝나기 전에 도서관 자료실에서 신청서를 작성해 주세요.” 의견의 ‘여기’는 ‘학생은’ 뒤다.'));
+      if (code === 'HE') q.splice(1, 0, ...heliumReading());
       if (code === 'MG') q.push(stage('종이에는 ‘입구 → 대기 자리’ 다음으로 ‘무대 뒤 → 퇴장’이 있고 두 줄을 잇는 화살표만 비어 있다.'));
     }
   } else if (id === 'TALK-REPEAT') {
@@ -85,11 +87,12 @@ export function periodScene(s, id, api) {
       q.push(say(person, s.events.crispyTaste ? '이건 제 빵집 지도예요. 전에 말한 바삭한 빵도요. 가격은 좀 고민돼요. 그런데 이걸 남도 납득할 순위로 적으려니 계속 비워 둬요.' : '이건 제 빵집 지도예요. 전 바삭한 빵이 좋은데 가격은 좀 고민돼요. 그런데 이걸 남도 납득할 순위로 적으려니 계속 비워 둬요.'));
       if (isRude(s)) q.push(say(person, '전에 제 역할을 제한한 말은 아직 마음에 걸려요.'));
     } else if (code === 'CL') {
-      q = [stage('과학 자료에서 Cl₂ 기체와 Cl⁻ 이온을 B-02의 물질 구분으로 확인한다.'), ...actorLines(bullets(id)[1])];
+      q = [chlorineReview(), ...actorLines(bullets(id)[1])];
     } else {
       q = actorLines(bullets(id).filter(l => !l.includes('**조건') && !l.includes('**앞선')).join('\n'));
       if (code === 'C' && p.promises.carbonFocus) q.push(say(person, '네가 말한 집중 효과는 알겠어. 다만 남길 자리도 고민하고 있어.'));
       if (code === 'CA' && p.promises.caLunchStop) q.push(say(person, '전에 정한 데서 멈췄으니 이번에도 믿고 물어볼게요.'));
+      if (code === 'CA') q.splice(1, 0, stage('자료 검토를 마친다.'));
       if (code === 'MG') q.splice(-1, 0, stage('종이 모형의 동작이 어긋나자 마그네슘이 설명 없이 접는 곳을 바꾼다.'));
     }
   } else if (id === 'LAB-CL-read') {
@@ -180,7 +183,7 @@ export function periodOptions(s, api) {
   if (id.startsWith('MEET-')) return meetOptions(code).map((o, i) => select(o.label, i, [say(person, o.response)], i === 0 ? s.day === 10 ? `EX-${code}` : `RE-${code}` : lunchEnd(s)));
   if (id.startsWith('RE-')) return mainRows(id).map((row, i) => {
     const effect = code === 'CA' && i === 0 ? { caLunchStop: true, caPlayed: true } : code === 'CA' && i === 2 ? { caPlayed: true } : code === 'C' && i === 1 ? { carbonFocus: true } : {};
-    const o = finishLunch([stage(clean(row[1]))], i, clean(row[0]), RELATIONS[id][i], effect);
+    const o = finishLunch(responseLines(id, i), i, clean(row[0]), RELATIONS[id][i], effect);
     const run = o.run; o.run = () => { if (Object.hasOwn(s.choices, s.eventId)) return; run(); s.queue.at(-1).complete = { type: 're', code }; }; return o;
   });
   if (id === 'TALK-REPEAT') return repeatRow(code).slice(1).map((text, i) => {
@@ -194,7 +197,10 @@ export function periodOptions(s, api) {
       if (!record(s, `DAY-${s.day}:AF:action`, '자유 행동')) return;
       p.actions[s.day] = { ...(p.actions[s.day] || {}), afterSchool: '자유 행동' };
       const q = [say('플레이어', s.day === 10 ? '첫 시험을 마쳤다. 오늘은 여기까지 하고 돌아가자.' : '오늘은 혼자 정리하고 돌아가자.')];
-      if (target && s.day !== 10) q.push(say(PEOPLE[target], quotes(mainRows('AF-SELECT').find(r => r[0] === PEOPLE[target])[2])[1]));
+      if (target && s.day !== 10) {
+        q[0].cast = [target];
+        q.push(say(PEOPLE[target], quotes(mainRows('AF-SELECT').find(r => r[0] === PEOPLE[target])[2])[1]));
+      }
       respond(q, s.day === 10 ? 'DAY11-HANDOFF' : nextDay(s));
     })];
     if (target) result.push(option(`${PEOPLE[target]}와 함께하기`, () => {
@@ -209,7 +215,7 @@ export function periodOptions(s, api) {
         q = [say('플레이어', quotes(row[1])[0]), say(PEOPLE[target], quotes(row[2])[0])];
         next = !p.labs[target] ? `LAB-${target}` : !p.follows[target] ? 'LAB-FOLLOW' : 'AF-QUIET';
       }
-      s.cast = [target]; respond(q, next);
+      q[0].cast = [target]; s.cast = [target]; respond(q, next);
     }));
     return result;
   }
@@ -222,11 +228,11 @@ export function periodOptions(s, api) {
     if (code === 'MG' && i === 0) effect.mgAttempt = true;
     if (code === 'CA' && i === 0) { effect.caPlayed = true; effect.caLabStop = true; if (p.promises.caLunchStop) { amount = RULES.major; snap = 'SNAP-CA'; } }
     const returnLine = quotes(row[3]).at(-1);
-    return finishLab(clean(row[0]), i, [stage(clean(row[1]))], returnLine, amount, snap, effect);
+    return finishLab(clean(row[0]), i, responseLines(id, i), returnLine, amount, snap, effect);
   });
   if (id === 'LAB-CL') return [select('여기서만 읽어 볼게', 0, [say(person, '응. 읽고 떠오른 걸 말해 줘.')], 'LAB-CL-read', { effect: { clPrivate: true } }),
     finishLab('오늘은 읽지 않을게. 허락해 준 건 고마워.', 1, [say(person, '알겠어. 보여 주는 것처럼 읽는 것도 선택이니까.')], '그럼 오늘은 안내문만 정리하자.', 0, null)];
-  if (id === 'LAB-CL-read') return mainRows('LAB-CL').slice(0, 2).map((row, i) => finishLab(clean(row[0]), i, [stage(clean(row[1]))], quotes(row[3]).at(-1), RULES.up, i === 0 ? 'SNAP-CL' : null, { clRead: true }));
+  if (id === 'LAB-CL-read') return mainRows('LAB-CL').slice(0, 2).map((row, i) => finishLab(clean(row[0]), i, responseLines('LAB-CL', i), quotes(row[3]).at(-1), RULES.up, i === 0 ? 'SNAP-CL' : null, { clRead: true }));
   if (id === 'LAB-FOLLOW') {
     const promise = p.promises;
     const data = {
@@ -245,7 +251,7 @@ export function periodOptions(s, api) {
       if (i === 0 && code === 'CL') { amount = promise.clRead ? promise.clPrivate ? RULES.major : RULES.up : 0; if (promise.clRead) effect.clDelivered = true; }
       if (code === 'NA' && isRude(s)) amount = 0;
       const q = [];
-      if (i === 0 && ['HE', 'MG', 'CA', 'CL'].includes(code)) q.push(stage(label));
+      if (i === 0) q.push(...followAction(code, promise));
       q.push(say(person, data[1][i]));
       return finishLab(label, i, q, code === 'HE' && i === 1 ? '오늘은 여기까지만 보자.' : data[2], amount, snap, effect,
         code === 'HE' && i === 1 ? s.eventId + ':defer' : `LAB-FOLLOW:${code}`);
