@@ -200,7 +200,7 @@ test('임의 선택 80회차: 필수 경로 차단 없음·저장 라운드트�
         // 절반은 실제 인물이 있는 장소의 교류를 우선하여 후속 사건도 탐색한다.
         if (seed % 2) {
           if (s.scene === 'LUNCH-SELECT') {
-            const occupied = opts.filter(o => SCHEDULE[s.day][o.label]); choice = occupied[next(occupied.length)];
+            const occupied = opts.filter(o => SCHEDULE[s.day][o.place]); choice = occupied[next(occupied.length)];
           }
           if (['LUNCH-ACTION', 'B-04-action'].includes(s.scene)) choice = opts[0];
           if (['AF-SELECT', 'D2-AF'].includes(s.scene)) choice = opts.at(-1);

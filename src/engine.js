@@ -1,7 +1,7 @@
 import { RULES, CHARACTERS } from './config.js';
 import { dialogue, lines, reaction, choiceText, NOTES, title } from './script.js';
 import { initPeriod, markCurrent, periodScene, periodOptions } from './extension.js';
-import { PERIOD_NOTES, MET_EVENTS, PEOPLE, EXAM, EXAM_POINTS, SNAPS } from './period.js';
+import { PERIOD_NOTES, MET_EVENTS, PEOPLE, EXAM, EXAM_POINTS, SNAPS, PLACES, lunchPeople, lunchPlaceLabel } from './period.js';
 import { presentCast, repairPresentation, NA_SCHEDULE_TEXT } from './presentation.js';
 
 const LEGACY_SCENES = {
@@ -16,7 +16,7 @@ const LEGACY_SCENES = {
 function legacyMetadata(s, id) {
   const meta = LEGACY_SCENES[id]; if (!meta) return;
   [s.day, s.time] = meta; s.location = meta[2] || s.place; s.cast = [...meta[3]];
-  if (id === 'A-04-action' && s.place === '도서관') s.cast = ['H'];
+  if (id === 'A-04-action') s.cast = lunchPeople(s.day, s.place);
   s.eventId = `DAY-${s.day}:${id}`;
 }
 const api = () => ({ enter, queue, score, record, notes: { ...NOTES, ...PERIOD_NOTES } });
@@ -118,20 +118,20 @@ export function options(s) {
   if (id === 'A-01') return standard('A-02', '수소', [0, RULES.up], i => { s.events.order = i === 0; s.events.mapInterest = i === 1; });
   if (id === 'A-02') return standard('A-03', null, [], i => { s.events.noteStyle = i === 0 ? '비교표' : '문장'; });
   if (id === 'A-03') return standard('A-04', '수소', [], i => { s.events.libraryIntent = i === 0; });
-  if (id === 'A-04' || id === 'B-04') return ['옥상', '복도', '교실', '도서관', '운동장'].map((place, i) => option(place, () => {
+  if (id === 'A-04' || id === 'B-04') return PLACES.map((place, i) => ({ place, ...option(lunchPlaceLabel(s.day, place), () => {
     if (!record(s, id + ':place', place)) return;
     s.place = place; s.scene = id + '-action';
     legacyMetadata(s, s.scene);
     queue(s, id === 'A-04' ? reaction('A-04', i) : [me(place === '복도' ? '수소가 말한 게시판이다.' : `${place}에 도착했다.`)]);
-  }));
+  }) }));
   if (id === 'A-04-action' || id === 'B-04-action') return ['대화', '공부', '스킵'].map((action, i) => option(action, () => {
-    const first = id.startsWith('A'); const library = first && s.place === '도서관';
+    const first = id.startsWith('A'); const library = first && lunchPeople(s.day, s.place).includes('H');
     if (!first && s.place !== '복도') {
       // 2일차 비복도는 D절의 공통 점심 경로로 연결한다. ABC 표 인덱스는 유지한다.
       s.period.actions[2] = { lunch: action }; s.period.invite = null;
       if (!record(s, id, action)) return;
       if (i === 0) {
-        const code = { 옥상: 'HE', 교실: 'C', 도서관: 'H', 운동장: 'CA' }[s.place];
+        const code = lunchPeople(s.day, s.place)[0];
         s.period.person = code;
         enter(s, `D2-${code}`);
       } else enter(s, i === 1 ? 'LUNCH-STUDY' : 'LUNCH-SKIP');
@@ -141,7 +141,7 @@ export function options(s) {
     s.period.actions[s.day] = { ...(s.period.actions[s.day] || {}), lunch: action };
     let q = [];
     if (library) { q = reaction('A-04', i, 1); if (i === 0) s.events.recordTaste = true; }
-    else if (!first && i === 0) { q = reaction('B-04', 0, 1); q.at(-1).met = 'NA'; }
+    else if (!first && i === 0) { q = reaction('B-04', 0, 1); q[0].cast = lunchPeople(s.day, s.place); q.at(-1).met = 'NA'; }
     else q = [me(i === 0 ? '이 구간에 아는 사람이 없어 짧게 둘러본다.' : i === 1 ? '오늘은 표기 차이부터 다시 보자.' : first ? '조용히 쉬며 시간을 보낸다.' : '누굴 만나야 한다는 생각부터 잠깐 내려놓자.')];
     if (i === 1) q.push(...s.notes.map(n => say(`핵심 노트 재열람 · ${n}`, NOTES[n])));
     reply(s, q, first ? 'A-05' : i === 0 ? 'B-04-talk' : 'B-05');

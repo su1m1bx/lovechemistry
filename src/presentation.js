@@ -1,4 +1,4 @@
-import { PEOPLE, mainRows, quotes, actorLines, clean, say, stage } from './period.js';
+import { PEOPLE, lunchPeople, mainRows, quotes, actorLines, clean, say, stage } from './period.js';
 
 // 표시할 대사/실제 행동과 제작 메모를 명시적으로 분류한다.
 // 따옴표만 추출하면 사라지는 행동, 이름 없이 이어지는 인물 대사를 함께 보존한다.
@@ -46,7 +46,7 @@ const MORNING_CAST = { 3: ['H'], 4: ['C'], 5: ['H'], 6: ['C'], 7: ['H'], 8: ['C'
 const companion = s => s.period.person ? [s.period.person] : [];
 const sceneCasts = {
   'A-01': ['H'], 'A-02': ['H'], 'A-03': ['H'], 'A-04': [],
-  'A-04-action': s => ({ 도서관: ['H'] })[s.place] || [],
+  'A-04-action': s => lunchPeople(s.day, s.place),
   'A-05': ['H'], 'B-01': ['H'], 'B-02': ['H'], 'B-03': ['C'], 'B-04': [], 'B-04-action': [], 'B-04-talk': ['NA'],
   'B-05': s => Object.hasOwn(s.choices, 'B-05') && s.events.naSchedule ? ['NA'] : [],
   ...Object.fromEntries(['C-01', 'C-02', 'C-03', 'C-04', 'C-05', 'C-06', 'C-summary', 'C-07'].map(id => [id, ['NA']])),

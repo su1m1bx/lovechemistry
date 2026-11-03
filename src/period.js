@@ -5,6 +5,7 @@ import { RULES } from './config.js';
 export const PEOPLE = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', MG: '마그네슘', CA: '칼슘', CL: '염소' };
 export const PLACES = ['옥상', '복도', '교실', '도서관', '운동장'];
 export const SCHEDULE = {
+  1: { 도서관: ['H'] },
   2: { 옥상: ['HE'], 복도: ['NA'], 교실: ['C'], 도서관: ['H'], 운동장: ['CA'] },
   3: { 복도: ['MG'], 도서관: ['CL'] },
   4: { 옥상: ['HE'], 운동장: ['CA'] },
@@ -15,6 +16,12 @@ export const SCHEDULE = {
   9: { 도서관: ['H'], 교실: ['C'] },
   10: { 옥상: ['HE'], 복도: ['NA', 'MG'], 교실: ['C'], 도서관: ['H', 'CL'], 운동장: ['CA'] },
 };
+// 점심(급식 뒤)의 배치와 선택지 표시는 같은 원본을 사용한다.
+export const lunchPeople = (day, place) => SCHEDULE[day]?.[place] || [];
+export function lunchPlaceLabel(day, place) {
+  const people = lunchPeople(day, place);
+  return `${place} · ${people.length ? people.map(code => PEOPLE[code]).join(', ') : '만날 인물 없음'}`;
+}
 export const MET_EVENTS = { H: 'hMet', HE: 'heMet', C: 'carbonMet', NA: 'naMet', MG: 'mgMet', CA: 'caMet', CL: 'clMet' };
 export const say = (who, text, extra = {}) => ({ who, text, kind: 'dialogue', ...extra });
 export const stage = text => say('장면', text, { kind: 'narration' });

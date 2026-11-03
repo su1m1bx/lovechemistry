@@ -1,7 +1,7 @@
 import { RULES } from './config.js';
 import { responseLines, heliumReading, chlorineReview, followAction } from './presentation.js';
 import { title } from './script.js';
-import { PEOPLE, PLACES, SCHEDULE, MET_EVENTS, say, stage, bullets, quotes, clean, actorLines,
+import { PEOPLE, PLACES, lunchPeople, lunchPlaceLabel, MET_EVENTS, say, stage, bullets, quotes, clean, actorLines,
   dayParts, PERIOD_NOTES, EXAM, EXAM_POINTS, SNAPS, invitation, introduction, meetOptions,
   mainRows, repeatRow, followRow, quietLine, RELATIONS } from './period.js';
 
@@ -157,15 +157,15 @@ export function periodOptions(s, api) {
     return select(label, i, entries, nextDay(s), { amount, rewardKey });
   };
   if (/^D[3-9]-RECESS$/.test(id)) return [select('노트를 확인하고 점심 장소 고르기', 0, actorLines(bullets(`D${s.day}-AM`).at(-1)), 'LUNCH-SELECT')];
-  if (id === 'LUNCH-SELECT') return PLACES.map(place => option(place, () => {
+  if (id === 'LUNCH-SELECT') return PLACES.map(place => ({ place, ...option(lunchPlaceLabel(s.day, place), () => {
     if (!record(s, `DAY-${s.day}:LUNCH:place`, place)) return;
     s.place = place; enter(s, 'LUNCH-ACTION');
-  }));
+  }) }));
   if (id === 'LUNCH-ACTION') return ['대화', '공부', '스킵'].map(action => option(action, () => {
     if (!record(s, `DAY-${s.day}:LUNCH:action`, action)) return;
     p.actions[s.day] = { ...(p.actions[s.day] || {}), lunch: action };
     p.history.push({ day: s.day, who: '플레이어', title: '점심', text: `${s.place} · ${action === '스킵' ? '휴식' : action}` });
-    const people = SCHEDULE[s.day]?.[s.place] || [];
+    const people = lunchPeople(s.day, s.place);
     if (action !== '대화') enter(s, action === '공부' ? 'LUNCH-STUDY' : 'LUNCH-SKIP');
     else if (people.length > 1) enter(s, 'LUNCH-PERSON');
     else if (people.length === 1) visit(people[0]);
@@ -175,7 +175,7 @@ export function periodOptions(s, api) {
     p.person = target;
     enter(s, !has(s, target) ? `MEET-${target}` : s.day === 10 ? `EX-${target}` : !p.re[target] ? `RE-${target}` : 'TALK-REPEAT');
   }
-  if (id === 'LUNCH-PERSON') return SCHEDULE[s.day][s.place].map(target => option(PEOPLE[target], () => {
+  if (id === 'LUNCH-PERSON') return lunchPeople(s.day, s.place).map(target => option(PEOPLE[target], () => {
     if (!record(s, `DAY-${s.day}:LUNCH:person`, target)) return;
     visit(target);
   }));
