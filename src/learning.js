@@ -8,7 +8,7 @@ export const CARDS = {
   conduction: { title: '이온이 있느냐, 움직일 수 있느냐', type: 'ions', caption: '설명용 모형 · 물 분자 생략 · 용액의 화살표는 전압을 걸었을 때 각 이온의 이동 방향 예시', feedback: '고체에도 이온은 있지만 자유롭게 이동하지 못합니다. 식염수에서는 이동할 수 있는 이온이 전류를 운반해요.' },
   shells: { title: '껍질별 전자 수로 위치를 비교해', type: 'shells', headers: ['중성 바닥상태 원자', '안쪽 1번 껍질', '2번 껍질', '3번 껍질', '위치'], rows: [['Li', '2', '1', '—', '1족 · 2주기'], ['Na', '2', '8', '1', '1족 · 3주기']], feedback: '바깥 전자는 둘 다 1개입니다. Na는 전자가 들어 있는 껍질이 셋이라 3주기예요.' },
   exceptions: { title: '수소와 헬륨의 예외도 함께', headers: ['원소', '기억할 점'], rows: [['H', '1족 비금속 · 알칼리 금속 아님'], ['He', '첫 껍질에 2개가 가득 찬 18족']], feedback: '족의 일반적인 패턴을 예외 없이 적용하지 마세요.' },
-  periodic: { title: '세로는 족, 가로는 주기', type: 'periodic', feedback: 'Na의 위치를 다시 짚으면 1족, 3주기입니다.' },
+  periodic: { title: '세로는 족, 가로는 주기', type: 'periodic', feedback: '세로 열은 족, 가로 행은 주기입니다. Na의 위치를 다시 짚으면 1족, 3주기입니다.' },
   history: { title: '빈칸도 근거가 되는 표', headers: ['초기 주기율표', '현대 주기율표'], rows: [['원자량·성질을 바탕으로 빈칸 예측', '원자번호 순으로 배열']], feedback: '빈칸은 발견하지 않은 원소를 예측하고 나중에 확인하려고 남긴 거예요.' },
   carbon: { title: '같은 탄소, 다른 배열', type: 'carbon', caption: '설명용 모형 · 연필심 전체가 순수 흑연인 것은 아님', feedback: '원자의 종류는 둘 다 탄소입니다. 같은 원소지만 배열이 다른 이런 물질을 동소체라고 해요. 흑연은 전기가 통해요.' },
   magnesium: { title: '같은 족도 모든 성질이 같지는 않아', headers: ['제공된 자료', '족', '찬물에서의 반응'], rows: [['Mg', '2족', 'Ca보다 훨씬 느림'], ['Ca', '2족', '물과 반응']], caption: '자료 비교 · 실제 금속 조작 없음', feedback: '속도가 반드시 같을까요? 아니에요. 제시된 조건에서 차이가 있습니다.' },
@@ -16,7 +16,7 @@ export const CARDS = {
 };
 export const NOTE_CARDS = {
   'A-02': ['molecules'], 'B-02': ['ions', 'materials', 'conduction'], 'C-01': ['conduction'],
-  'D3-NOTE': ['ions'], 'D4-NOTE': ['shells', 'exceptions'], 'D5-NOTE': ['history'], 'D6-NOTE': ['carbon'], 'D8-NOTE': ['magnesium'],
+  'D3-NOTE': ['ions'], 'D4-NOTE': ['periodic', 'shells', 'exceptions'], 'D5-NOTE': ['history'], 'D6-NOTE': ['carbon'], 'D8-NOTE': ['magnesium'],
   'D11-NOTE': ['molecules'], 'D12-NOTE': ['ions'], 'D13-NOTE': ['periodic'], 'D14-NOTE': ['conduction'], 'D15-NOTE': ['observation'],
 };
 export const LESSON_NOTES = {

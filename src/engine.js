@@ -122,7 +122,8 @@ export function options(s) {
   const choose = (i, who, amount, q, target, effects = () => {}) => {
     if (!record(s, id, i, who, amount)) return;
     if (id === 'A-05' || id === 'B-05') s.period.actions[s.day] = { ...(s.period.actions[s.day] || {}), afterSchool: i === 0 ? '자유 행동' : id === 'A-05' ? 'H' : 'NA' };
-    effects(); reply(s, q, target);
+    // 선택 이력과 현재 불편 상태를 응답 표시·저장 전에 함께 확정한다.
+    effects(); initMid(s); reply(s, q, target);
   };
   const standard = (next, who, amounts = [], effect = () => {}) => tableOptions(s, id, 0, i => choose(i, who, amounts[i] || 0, reaction(id, i), next, () => effect(i)));
   if (id === 'A-01') return standard('A-02', '수소', [0, RULES.up], i => { s.events.order = i === 0; s.events.mapInterest = i === 1; });
