@@ -4,6 +4,8 @@ import { RULES, SAVE_KEY, README_URL } from './config.js';
 import { NOTES, choiceText, title } from './script.js';
 import { PEOPLE, MET_EVENTS, PERIOD_NOTES, EXAM, SNAPS } from './period.js';
 import { examAnswer, submitExam, finishExam } from './extension.js';
+import { NOTE_CARDS } from './learning.js';
+import { learningCard } from './cards.js';
 
 const app = document.querySelector('#app');
 let state = null;
@@ -49,7 +51,7 @@ function topbar() {
 function titleScreen(main) {
   main.className = 'title-screen';
   const intro = el('section', undefined, 'intro');
-  intro.append(el('p', 'A SMALL SCHOOL STORY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('p', '같은 자료를, 서로 다른 마음으로.\n새로운 학교에서 첫 시험까지 이어지는 이야기.', 'subtitle'), el('p', '1~10일차 · 첫 시험까지', 'edition'));
+  intro.append(el('p', 'A SMALL SCHOOL STORY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('p', '같은 자료를, 서로 다른 마음으로.\n첫 시험을 지나 서로의 취향을 알아가는 이야기.', 'subtitle'), el('p', '1~15일차 · 다음에라는 말', 'edition'));
   const card = el('section', undefined, 'menu-card');
   card.append(el('span', '01 — 처음 만나는 학교', 'eyebrow'), el('h2', '이야기를 시작할까요?'));
   card.append(button('새 게임', () => { screen = 'name'; message = ''; }, false, 'primary'), button('불러오기', load));
@@ -70,7 +72,10 @@ function notebook() {
   const box = el('aside', undefined, 'panel'); box.append(el('h2', panel === 'notes' ? '받은 핵심 노트' : '선택과 실제 경험'), button('닫기', () => { panel = ''; }));
   if (panel === 'notes') {
     if (!state.notes.length) box.append(el('p', '아직 받은 핵심 노트가 없습니다.'));
-    state.notes.forEach(n => box.append(el('h3', n === 'A-02' ? `원소와 물질 · ${state.events.noteStyle || '수업'}` : n === 'B-02' ? '이온·화합물과 전도성' : `${Number(n.match(/\d+/)[0])}일차 핵심 노트`), el('p', NOTES[n] || PERIOD_NOTES[n], 'pre')));
+    state.notes.forEach(n => {
+      box.append(el('h3', n === 'A-02' ? `원소와 물질 · ${state.events.noteStyle || '수업'}` : n === 'B-02' ? '이온·화합물과 전도성' : `${Number(n.match(/\d+/)[0])}일차 핵심 노트`), el('p', NOTES[n] || PERIOD_NOTES[n], 'pre'));
+      (NOTE_CARDS[n] || []).forEach(id => box.append(learningCard(id, true)));
+    });
   } else {
     box.append(el('h3', '만난 사람'));
     const encounters = Object.entries(PEOPLE).map(([code, name]) => [MET_EVENTS[code], `${name} · ${code === 'H' ? '학교 안내' : code === 'C' ? '게시판 홍보물 이야기' : code === 'NA' ? '급식 게시판에서의 인사' : '직접 인사를 나눔'}`]);
@@ -92,6 +97,7 @@ function notebook() {
     box.append(list);
     state.period.history.forEach(h => box.append(el('p', `${h.day}일차 · ${h.who} · ${h.title}\n${h.text}`, 'pre')));
     if (state.exam.result) box.append(el('h3', '첫 시험 결과'), el('p', `10일차 · ${state.exam.result.score}/100점`));
+    if (state.events.takeover || state.events.dismiss) box.append(el('h3', '나트륨과 남은 이야기'), el('p', { unresolved: '미해결', watching: '행동을 지켜보는 중', resolved: '해소됨' }[state.mid.sodium.status]));
     const memories = [
       ['recordTaste', '수소가 좋아하는 중고 음반 가게와 버스 정류장 이야기를 나눴다.'],
       ['naSchedule', '나트륨이 방과후에 학교 시뮬레이터를 사용할 일정을 들었다.'],
@@ -155,15 +161,16 @@ function playScreen(main) {
   if (state.scene === 'EX-PAPER' || state.scene === 'EX-RESULT') { main.append(examScreen()); return; }
   if (current?.snap) { main.append(snapScreen(current)); return; }
   const dialogue = el('section', undefined, 'dialogue'); dialogue.setAttribute('aria-label', '대사창');
-  const who = current?.who || (state.scene === 'DAY11-HANDOFF' ? '이번 버전의 범위 종료' : state.lab.task ? '가상 실험' : '선택');
+  const who = current?.who || (state.scene === 'DAY16-HANDOFF' ? '현재 제공 범위' : state.lab.task ? '가상 실험' : '선택');
   dialogue.append(el('h2', who.startsWith('플레이어') ? `${state.name}${who.includes('독백') ? ' · 독백' : ''}` : who, 'speaker'));
-  const text = current?.text || (state.scene === 'DAY11-HANDOFF' ? '1~10일차 제공 범위가 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
-  dialogue.append(el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text'));
+  const text = current?.text || (state.scene === 'DAY16-HANDOFF' ? '1~15일차 제공 범위가 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
+  if (current?.card) dialogue.append(learningCard(current.card));
+  else dialogue.append(el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text'));
   if (current) dialogue.append(button('다음 ▸', () => { advance(state); message = ''; }, false, 'next'));
   else {
     const choices = el('div', undefined, 'choices'); options(state).forEach(({ label, run, disabled }, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${label}`, () => { run(); message = ''; }, disabled)));
     dialogue.append(choices);
-    if (state.scene === 'DAY11-HANDOFF') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
+    if (state.scene === 'DAY16-HANDOFF') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
   }
   main.append(dialogue);
   if (state.scene.startsWith('C') && state.scene !== 'C-07') main.append(experiment());
@@ -187,11 +194,13 @@ function examScreen() {
     EXAM.forEach((q, i) => {
       const answer = exam.result.details[i].answer;
       box.append(el('h3', `${i + 1}. ${q.prompt}`), el('p', `제출 답: ${answer === null ? '미응답' : q.options[answer]} · ${exam.result.details[i].points}점`), el('p', `정답: ${q.options[q.correct]}\n해설: ${q.explanation}`, 'pre'));
+      if (q.card) box.append(learningCard(q.card));
     });
     box.append(button('결과 확인 · 시험 후 일과로', () => { finishExam(state, enterScene); save(); }, false, 'primary'));
   } else {
     const q = EXAM[exam.index];
     box.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.', 'muted'), el('h3', q.prompt));
+    if (q.card) box.append(learningCard(q.card));
     const answers = el('fieldset'); answers.append(el('legend', '답안 선택'));
     const count = el('p'); count.setAttribute('aria-live', 'polite');
     const updateCount = () => { count.textContent = `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`; };

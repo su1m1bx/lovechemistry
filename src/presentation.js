@@ -42,7 +42,7 @@ export function followAction(code, promises) {
 export const NA_SCHEDULE_TEXT = '저는 방과후 과학실의 학교 시뮬레이터를 쓸 거예요. 고체 식염이랑 물, 식염수를 측정해 보고 설명을 정리하려고요.';
 
 // 장면의 현장 인물만 지정한다. 대사에 언급된 이름이나 화자를 검색하지 않는다.
-const MORNING_CAST = { 3: ['H'], 4: ['C'], 5: ['H'], 6: ['C'], 7: ['H'], 8: ['C'], 9: ['H', 'C'], 10: ['H', 'C'] };
+const MORNING_CAST = { 3: ['H'], 4: ['C'], 5: ['H'], 6: ['C'], 7: ['H'], 8: ['C'], 9: ['H', 'C'], 10: ['H', 'C'], 11: ['H', 'C'], 12: ['C'], 13: ['H'], 14: ['C'], 15: ['H', 'C'] };
 const companion = s => s.period.person ? [s.period.person] : [];
 const sceneCasts = {
   'A-01': ['H'], 'A-02': ['H'], 'A-03': ['H'], 'A-04': [],
@@ -50,7 +50,7 @@ const sceneCasts = {
   'A-05': ['H'], 'B-01': ['H'], 'B-02': ['H'], 'B-03': ['C'], 'B-04': [], 'B-04-action': [], 'B-04-talk': ['NA'],
   'B-05': s => Object.hasOwn(s.choices, 'B-05') && s.events.naSchedule ? ['NA'] : [],
   ...Object.fromEntries(['C-01', 'C-02', 'C-03', 'C-04', 'C-05', 'C-06', 'C-summary', 'C-07'].map(id => [id, ['NA']])),
-  ...Object.fromEntries(Object.entries(MORNING_CAST).flatMap(([day, cast]) => [[`D${day}-AM`, cast], [`D${day}-RECESS`, cast], [`D${day}-NOTE`, cast]])),
+  ...Object.fromEntries(Object.entries(MORNING_CAST).flatMap(([day, cast]) => [[`D${day}-AM`, cast], [`D${day}-RECESS`, cast], [`D${day}-NOTE`, Number(day) >= 11 ? [] : cast]])),
   ...Object.fromEntries(['LUNCH-SELECT', 'LUNCH-ACTION', 'LUNCH-PERSON', 'LUNCH-STUDY', 'LUNCH-SKIP', 'LUNCH-EMPTY', 'EX-START', 'EX-PAPER', 'EX-RESULT', 'DAY11-HANDOFF'].map(id => [id, []])),
   ...Object.fromEntries(Object.keys(PEOPLE).flatMap(code => [`D2-${code}`, `MEET-${code}`, `RE-${code}`, `LAB-${code}`, `EX-${code}`].map(id => [id, companion]))),
   ...Object.fromEntries(['TALK-REPEAT', 'LAB-CL-read', 'LAB-FOLLOW', 'AF-QUIET', 'AF-EX'].map(id => [id, companion])),
@@ -59,6 +59,9 @@ const sceneCasts = {
     return PEOPLE[choice] ? [choice] : [];
   }])),
   'EX-AFTER': ['H', 'C'],
+  ...Object.fromEntries(['MID-LUNCH', 'MID-ACTION', 'MID-PERSON', 'MID-STUDY', 'MID-NOTE', 'MID-BREAK', 'MID-EMPTY', 'MID-AF', 'D15-NIGHT', 'DAY16-HANDOFF'].map(id => [id, []])),
+  ...Object.fromEntries(['MID-INTRO', 'MID-SEED', 'MID-ECHO', 'MID-LATE', 'MID-NEXT', 'MID-REST', 'MID-INVITE', 'MID-HE-PREP', 'MID-NA-REPAIR', 'MID-NA-CHECK', 'MID-PLAY-CL-READ', 'EX-PERSONAL', ...Object.keys(PEOPLE).map(c => `MID-PLAY-${c}`)].map(id => [id, companion])),
+  'MID-CLOSE': s => PEOPLE[s.period.actions[s.day]?.afterSchool] ? [s.period.actions[s.day].afterSchool] : [],
 };
 export function presentCast(s) {
   const rule = sceneCasts[s.scene];

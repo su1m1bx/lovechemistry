@@ -1,6 +1,9 @@
 import { RULES } from './config.js';
 import { responseLines, heliumReading, chlorineReview, followAction } from './presentation.js';
 import { title } from './script.js';
+import { lessonCards } from './learning.js';
+import { personalEligible } from './mid.js';
+import { uncomfortable } from './chronology.js';
 import { PEOPLE, PLACES, lunchPeople, lunchPlaceLabel, MET_EVENTS, say, stage, bullets, quotes, clean, actorLines,
   dayParts, PERIOD_NOTES, EXAM, EXAM_POINTS, SNAPS, invitation, introduction, meetOptions,
   mainRows, repeatRow, followRow, quietLine, RELATIONS } from './period.js';
@@ -22,7 +25,7 @@ export function markCurrent(s) {
   if (q.invite) s.period.invite = { day: s.day, code: q.invite };
   if (q.snap && !s.snaps[q.snap]) s.snaps[q.snap] = { day: s.day, event: s.eventId };
 }
-const isRude = s => s.events.takeover || s.events.dismiss;
+const isRude = s => s.mid ? uncomfortable(s) : s.events.takeover || s.events.dismiss;
 const nextDay = s => s.day === 9 ? 'D10-AM' : `D${s.day + 1}-AM`;
 const lunchEnd = s => s.day === 10 ? 'EX-AF' : s.day === 2 ? 'D2-AF' : 'AF-SELECT';
 const has = (s, code) => s.period.met[code];
@@ -41,7 +44,7 @@ export function periodScene(s, id, api) {
     q = dayParts(s.day).morning; after = `D${s.day}-NOTE`;
   } else if (/^D[3-9]-NOTE$/.test(id)) {
     s.time = '수업'; s.location = '교실'; s.cast = [];
-    const note = `D${s.day}-NOTE`; q = [say('수업 핵심 노트', PERIOD_NOTES[note], { note })]; after = `D${s.day}-RECESS`;
+    const note = `D${s.day}-NOTE`; q = [say('수업 핵심 노트', PERIOD_NOTES[note], { note }), ...lessonCards(note)]; after = `D${s.day}-RECESS`;
   } else if (/^D[3-9]-RECESS$/.test(id)) {
     s.time = '쉬는 시간'; s.cast = s.day === 9 ? ['H', 'C'] : s.day % 2 ? ['H'] : ['C']; q = dayParts(s.day).recess;
   } else if (/^D2-(H|HE|C|CA)$/.test(id)) {
@@ -120,7 +123,7 @@ export function periodScene(s, id, api) {
     s.cast = [code]; q = actorLines(bullets(id)[1]);
   } else if (id === 'DAY11-HANDOFF') {
     s.time = '귀가'; s.location = '10일차 완료'; s.cast = [];
-    q = [say('플레이어', '내일도 학교는 이어진다.'), say('이번 버전의 범위 종료', '여기까지가 1~10일차 제공 범위입니다. 첫 시험 결과와 진행 기록을 저장할 수 있습니다. 20일차 시험·30일차 방학식과 엔딩은 포함되지 않습니다.')];
+    q = [say('플레이어', '내일도 학교는 이어진다.'), say('진행 확인', '첫 시험 결과와 지금까지의 기록을 보존하고 11일차로 이어갈 수 있습니다.')];
   } else return false;
   s.eventId = event(s, id);
   queue(s, q.filter(Boolean), after);
@@ -189,7 +192,7 @@ export function periodOptions(s, api) {
   if (id === 'TALK-REPEAT') return repeatRow(code).slice(1).map((text, i) => {
     const [label, response] = quotes(text);
     const invite = invitation(code); invite.at(-1).invite = code;
-    return select(label, i, [say(person, response), ...invite], lunchEnd(s), { amount: i === 0 ? RULES.up : 0, rewardKey: `TALK-REPEAT:${code}` });
+    return select(label, i, [say(person, response), ...invite], lunchEnd(s), { amount: i === 0 ? code === 'HE' ? 2 : 3 : 0, rewardKey: `TALK-REPEAT:${code}` });
   });
   if (['AF-SELECT', 'D2-AF', 'EX-AF'].includes(id)) {
     const target = invited;
@@ -232,7 +235,7 @@ export function periodOptions(s, api) {
   });
   if (id === 'LAB-CL') return [select('여기서만 읽어 볼게', 0, [say(person, '응. 읽고 떠오른 걸 말해 줘.')], 'LAB-CL-read', { effect: { clPrivate: true } }),
     finishLab('오늘은 읽지 않을게. 허락해 준 건 고마워.', 1, [say(person, '알겠어. 보여 주는 것처럼 읽는 것도 선택이니까.')], '그럼 오늘은 안내문만 정리하자.', 0, null)];
-  if (id === 'LAB-CL-read') return mainRows('LAB-CL').slice(0, 2).map((row, i) => finishLab(clean(row[0]), i, responseLines('LAB-CL', i), quotes(row[3]).at(-1), RULES.up, i === 0 ? 'SNAP-CL' : null, { clRead: true }));
+  if (id === 'LAB-CL-read') return mainRows('LAB-CL').slice(0, 2).map((row, i) => finishLab(clean(row[0]), i, responseLines('LAB-CL', i), quotes(row[3]).at(-1), 5, i === 0 ? 'SNAP-CL' : null, { clRead: true }));
   if (id === 'LAB-FOLLOW') {
     const promise = p.promises;
     const data = {
@@ -245,10 +248,10 @@ export function periodOptions(s, api) {
       CL: [[promise.clRead ? '밖에 옮기지 않고 개인 해석 메모를 지금 염소에게만 보여 주기' : '잡지의 한 표현을 함께 읽기', '오늘은 새 원고 대신 잡지 이야기만 하기'], [promise.clRead ? '공개용 설명으로 고치지 않았네. 그 메모는 여기 둘게.' : '좋아. 그 장엄한 광고부터 보자.', '좋아. 그 장엄한 광고부터 보자.'], '오늘 읽은 뜻은 오늘 자리에서 끝내자.'],
     }[code];
     return data[0].map((label, i) => {
-      let amount = i === 0 ? RULES.up : 0; let snap = null; const effect = {};
+      let amount = i === 0 ? code === 'HE' ? 3 : 5 : 0; let snap = null; const effect = {};
       if (i === 0 && code === 'HE' && promise.heAgreement) { amount = RULES.major; snap = 'SNAP-HE'; effect.heReturned = true; }
       if (i === 0 && code === 'MG' && promise.mgAttempt) { amount = RULES.major; effect.mgFollowed = true; }
-      if (i === 0 && code === 'CL') { amount = promise.clRead ? promise.clPrivate ? RULES.major : RULES.up : 0; if (promise.clRead) effect.clDelivered = true; }
+      if (i === 0 && code === 'CL') { amount = promise.clRead && promise.clPrivate ? RULES.major : 5; if (promise.clRead) effect.clDelivered = true; }
       if (code === 'NA' && isRude(s)) amount = 0;
       const q = [];
       if (i === 0) q.push(...followAction(code, promise));
@@ -267,7 +270,7 @@ export function periodOptions(s, api) {
     if (p.promises[memory[0]] || code === 'NA' && s.events.crispyTaste) response.push(say(person, memory[1]));
     const inviteLine = actorLines(bullets(id).at(-1)).filter(q => q.text.includes('방과후')).at(-1);
     inviteLine.invite = code;
-    return select(label, i, [...response, inviteLine], 'EX-AF');
+    return select(label, i, [...response, inviteLine], personalEligible(s, code) ? 'EX-PERSONAL' : 'EX-AF');
   });
   return [];
 }

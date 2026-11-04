@@ -1,4 +1,5 @@
 import source from '../docs/story.md?raw';
+import { LESSON_NOTES } from './learning.js';
 export { source };
 
 // 대본의 원문을 사용한다. 장면 ID / 표의 행 번호는 서사상의 선택 지점이다.
@@ -12,7 +13,7 @@ export function rows(id, table = 0) {
 export const title = id => sections[id]?.title || '';
 export const prose = id => sections[id].body.split('\n\n').filter(p => /^(수소|플레이어|화학 교사|탄소|나트륨):/.test(p));
 export const note = id => sections[id].body.split('\n').filter(l => l.startsWith('- ') && !l.startsWith('- **')).join('\n').replaceAll(/^- /gm, '• ');
-export const NOTES = { 'A-02': note('A-02'), 'B-02': note('B-02'), 'C-01': note('C-01') };
+export const NOTES = Object.fromEntries(['A-02', 'B-02', 'C-01'].map(id => [id, LESSON_NOTES[id]]));
 export function speech(text) {
   const matches = [...text.matchAll(/(수소|플레이어 독백|플레이어|화학 교사|탄소|나트륨): “([^”]+)”/g)];
   return matches.length ? matches.map(([, who, text]) => ({ who, text })) : [{ who: '안내', text }];

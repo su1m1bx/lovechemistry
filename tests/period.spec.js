@@ -94,11 +94,12 @@ async function finish10(page, code = null) {
   if ((await scene(page)).startsWith('MEET-')) await choose(page, 0);
   if (code) await choose(page, 0);
   else await choose(page, 0); // 휴식 마치기
+  if (await scene(page) === 'EX-PERSONAL') await choose(page, 0);
   await expect(page.locator('.scene-id')).toHaveText('EX-AF');
   await choose(page, code ? 1 : 0);
   if (code) await choose(page, 0);
   await expect(page.locator('.scene-id')).toHaveText('DAY11-HANDOFF');
-  await expect(page.locator('.dialogue')).toContainText('1~10일차 제공 범위');
+  await expect(page.locator('.dialogue')).toContainText('11일차로 이어가기');
   return save(page);
 }
 
@@ -111,7 +112,8 @@ test('한 회차에서 전원 첫 만남·동행, 첫 시험 저장 복원 후 1
   expect(Object.keys(s.period.labs).sort()).toEqual(Object.keys(people).sort());
   expect(s.notes).toContain('D4-NOTE'); expect(s.notes).toHaveLength(9);
   await page.getByRole('button', { name: '핵심 노트', exact: true }).click();
-  await expect(page.locator('.panel')).toContainText('Li 2,1과 Na 2,8,1'); await page.getByRole('button', { name: '닫기', exact: true }).click();
+  await expect(page.locator('.panel [data-card="shells"] table')).toContainText('Li');
+  await expect(page.locator('.panel [data-card="shells"] table')).toContainText('Na'); await page.getByRole('button', { name: '닫기', exact: true }).click();
   await takeExam(page, { restoreDuring: true });
   s = await finish10(page, 'MG'); expect(s.day).toBe(10); expect(s.exam.result.score).toBe(100);
   expect(snaps.sort()).toEqual(['SNAP-MG', 'SNAP-NA', 'SNAP-H', 'SNAP-CL', 'SNAP-C', 'SNAP-CA'].sort());
@@ -127,11 +129,11 @@ for (const action of ['study', 'skip']) test(`매일 ${action}: 미만남·무�
   const end = await finish10(page); expect(end.affinity).toEqual(before.affinity); expect(end.exam.result.score).toBe(0);
 });
 
-for (const [code, maximum] of [['H', 21], ['HE', 17], ['C', 15], ['NA', 15], ['MG', 17], ['CA', 17], ['CL', 17]]) test(`${people[code]} 집중 경로·관계 수치·스냅 전중후 복원`, async ({ page }) => {
+for (const [code, maximum] of [['H', 26], ['HE', 17], ['C', 20], ['NA', 20], ['MG', 20], ['CA', 20], ['CL', 20]]) test(`${people[code]} 집중 경로·관계 수치·스냅 전중후 복원`, async ({ page }) => {
   test.setTimeout(120000); await start(page); const snaps = [];
   await runToExam(page, { plan: Object.fromEntries(available[code].map(d => [d, code])), snaps, snapshots: true });
   const s = await save(page);
-  // C 동행 대신 자유 행동으로 시작했으므로 나트륨은 전체 최대 18보다 3 낮다.
+  // EX-PERSONAL 이전. 나트륨은 2일차 가상 실험 대신 자유 행동이므로 별도 최적과 다르다.
   expect(s.affinity[people[code]]).toBe(maximum);
   expect(s.period.labs[code]).toBe(true); expect(s.period.follows[code]).toBe(true);
   if (code !== 'NA') expect(snaps).toContain('SNAP-' + code);
@@ -273,9 +275,9 @@ test('조건별 관계 수치와 스냅 생략: 무례·미합의·미열람·�
   expect(results.rudeNA.affinity['나트륨']).toBe(0); expect(results.rudeNA.snaps['SNAP-NA']).toBeTruthy(); expect(results.rudeNA.events.takeover).toBe(true);
   expect(results.rudeFollow.affinity['나트륨']).toBe(0); expect(results.rudeFollow.events.takeover).toBe(true);
   expect(results.noAgreement.affinity['헬륨']).toBe(3); expect(results.noAgreement.snaps).toEqual({});
-  expect(results.noAttempt.affinity['마그네슘']).toBe(3); expect(results.noRead.affinity['염소']).toBe(0);
-  expect(results.noStop.affinity['칼슘']).toBe(3); expect(results.noStop.snaps).toEqual({});
-  expect(results.otherReading.affinity['염소']).toBe(3); expect(results.otherReading.snaps).toEqual({});
+  expect(results.noAttempt.affinity['마그네슘']).toBe(5); expect(results.noRead.affinity['염소']).toBe(5);
+  expect(results.noStop.affinity['칼슘']).toBe(5); expect(results.noStop.snaps).toEqual({});
+  expect(results.otherReading.affinity['염소']).toBe(5); expect(results.otherReading.snaps).toEqual({});
   expect(results.noReading.affinity['염소']).toBe(0); expect(results.noReading.promises.clRead).toBeUndefined();
   expect(results.mgNegative.events.takeover).toBe(false); expect(results.cNegative.events.takeover).toBe(false);
 });

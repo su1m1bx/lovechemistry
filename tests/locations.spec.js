@@ -18,14 +18,14 @@ function experience(s) {
   return { events: s.events, met: s.period.met, invite: s.period.invite, promises: s.period.promises, affinity: s.affinity };
 }
 
-for (let day = 1; day <= 10; day++) test(`${day}일차 점심: 원본 배치 표시·도착 후 일치·미만남 기록 및 저장 보존`, async ({ page }) => {
+for (let day = 1; day <= 15; day++) test(`${day}일차 점심: 원본 배치 표시·도착 후 일치·미만남 기록 및 저장 보존`, async ({ page }) => {
   test.setTimeout(60000); await page.goto('/');
   const { state, places, schedule, names } = await page.evaluate(async day => {
     const { fresh, enter } = await import('/src/engine.js');
     const { PLACES, SCHEDULE, PEOPLE } = await import('/src/period.js');
     const s = fresh('위치검증'); s.day = day;
     s.events.hMet = true; if (day >= 2) s.events.carbonMet = true;
-    enter(s, day === 1 ? 'A-04' : day === 2 ? 'B-04' : 'LUNCH-SELECT');
+    enter(s, day === 1 ? 'A-04' : day === 2 ? 'B-04' : day <= 10 ? 'LUNCH-SELECT' : 'MID-LUNCH');
     return { state: s, places: PLACES, schedule: SCHEDULE[day], names: PEOPLE };
   }, day);
   await load(page, state);
@@ -42,7 +42,7 @@ for (let day = 1; day <= 10; day++) test(`${day}일차 점심: 원본 배치 표
     expect(day <= 2 ? arrived.choices[`${day === 1 ? 'A' : 'B'}-04:place`] : arrived.choices[`DAY-${day}:LUNCH:place`]).toBe(place);
     for (const [personIndex, code] of (schedule[place] || []).entries()) {
       await load(page, arrived); await page.locator('.choices button').first().click();
-      if (day === 10 && schedule[place].length > 1) {
+      if (day >= 10 && schedule[place].length > 1) {
         await drain(page);
         expect(await page.locator('.choices button').allTextContents()).toEqual(schedule[place].map((c, i) => `${String(i + 1).padStart(2, '0')}  ${names[c]}`));
         await expect(page.locator('.affinity')).toHaveCount(0);
