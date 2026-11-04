@@ -6,13 +6,19 @@ import { PEOPLE, MET_EVENTS, PERIOD_NOTES, EXAM, SNAPS } from './period.js';
 import { examAnswer, submitExam, finishExam } from './extension.js';
 import { NOTE_CARDS } from './learning.js';
 import { learningCard } from './cards.js';
+import { snapPresentation, revealSnap } from './vn-presentation.js';
 
 const app = document.querySelector('#app');
 let state = null;
-let screen = 'title';
+let screen = 'splash';
 let message = '';
 let panel = '';
 const failedSnapImages = new Set();
+let panelReturn = '';
+let restoreFocus = '';
+let renderedPosition = '';
+let statusTimer;
+const interactive = 'button, input, select, textarea, a, summary, [contenteditable], .learning-area, .lab, .exam, dialog';
 const el = (tag, text, cls) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -21,7 +27,7 @@ const el = (tag, text, cls) => {
 };
 function button(text, run, disabled = false, cls = '') {
   const b = el('button', text, cls); b.type = 'button'; b.disabled = disabled;
-  b.addEventListener('click', () => { run(); render(); });
+  b.addEventListener('click', event => { event.stopPropagation(); run(); render(); });
   return b;
 }
 function help() {
@@ -36,28 +42,68 @@ function load() {
   } catch (error) { message = `불러오기 실패: ${error.message}`; }
 }
 function save() {
+  snapPresentation(state);
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); message = '현재 장면·선택·호감도·실험 상태를 저장했습니다.'; }
   catch { message = '저장하지 못했습니다. 브라우저 저장 공간 또는 접근 권한을 확인해 주세요. 현재 진행은 유지됩니다.'; }
 }
 function topbar() {
   const header = el('header');
-  header.append(el('span', 'L&C / 러브 앤 케미스트리', 'brand'));
+  if (screen === 'play') {
+    const meta = metadata(state);
+    const strip = el('section', undefined, 'day-strip');
+    strip.append(el('strong', `DAY ${String(meta.day).padStart(2, '0')}`), el('span', meta.time), el('span', meta.location), el('span', state.scene, 'scene-id'));
+    header.append(strip);
+  } else header.append(el('span', 'L&C / 러브 앤 케미스트리', 'brand'));
   const nav = el('nav'); nav.setAttribute('aria-label', '게임 메뉴');
   if (screen === 'play') {
-    nav.append(button('저장', save), button('불러오기', load), button('핵심 노트', () => { panel = panel === 'notes' ? '' : 'notes'; }), button('기록', () => { panel = panel === 'records' ? '' : 'records'; }), button('시작 화면', () => { screen = 'title'; panel = ''; }));
+    nav.className = 'desktop-menu';
+    nav.append(...menuButtons());
+    const toggle = button('메뉴', () => openPanel('menu'), false, 'menu-toggle');
+    toggle.setAttribute('aria-haspopup', 'dialog'); header.append(toggle);
   }
   nav.append(button('도움말 ↗', help)); header.append(nav); return header;
 }
+function openPanel(next) {
+  panelReturn = document.activeElement?.textContent || '메뉴';
+  panel = next;
+}
+function closePanel() { panel = ''; restoreFocus = panelReturn; }
+function menuButtons() {
+  return [button('저장', save), button('불러오기', load), button('핵심 노트', () => openPanel('notes')), button('기록', () => openPanel('records')), button('시작 화면', () => { screen = 'title'; panel = ''; })];
+}
+function logo() {
+  const box = el('div', undefined, 'logo');
+  box.append(el('p', 'LOVE & CHEMISTRY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('span', '마음이 만나는 작은 학교 이야기', 'subtitle'));
+  return box;
+}
+function splashScreen(main) {
+  main.className = 'splash-screen';
+  main.append(logo(), button('이야기 열기', () => { screen = 'title'; }, false, 'splash-skip'));
+  main.addEventListener('click', () => { screen = 'title'; render(); });
+}
 function titleScreen(main) {
   main.className = 'title-screen';
+  const decoration = el('div', undefined, 'title-decoration');
+  const backdrop = el('img', undefined, 'title-panel'); backdrop.src = `${import.meta.env.BASE_URL}assets/ui/title-panel.svg`; backdrop.alt = ''; decoration.append(backdrop); main.append(decoration);
   const intro = el('section', undefined, 'intro');
-  intro.append(el('p', 'A SMALL SCHOOL STORY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('p', '같은 자료를, 서로 다른 마음으로.\n첫 시험을 지나 서로의 취향을 알아가는 이야기.', 'subtitle'), el('p', '1~15일차 · 다음에라는 말', 'edition'));
+  intro.append(logo());
   const card = el('section', undefined, 'menu-card');
-  card.append(el('span', '01 — 처음 만나는 학교', 'eyebrow'), el('h2', '이야기를 시작할까요?'));
-  card.append(button('새 게임', () => { screen = 'name'; message = ''; }, false, 'primary'), button('불러오기', load));
+  card.append(button('새 게임', () => { screen = 'intro'; message = ''; }, false, 'primary'), button('불러오기', load));
   if (state) card.append(button('현재 진행 계속하기', () => { screen = 'play'; }));
   card.append(button('도움말 · GitHub README ↗', help), el('p', '저장은 이 브라우저의 LocalStorage에 보관됩니다. 새 게임은 기존 저장 슬롯을 덮어쓰지 않습니다.', 'muted'));
-  main.append(intro, card);
+  intro.append(card);
+  const welcome = el('section', undefined, 'title-art');
+  welcome.append(el('p', '같은 자료를, 서로 다른 마음으로.', 'title-quote'));
+  const names = el('div', undefined, 'title-names');
+  Object.entries(PEOPLE).forEach(([code, name]) => { const tile = el('div'); tile.append(el('span', code === 'NA' ? 'Na' : code === 'HE' ? 'He' : code === 'MG' ? 'Mg' : code === 'CA' ? 'Ca' : code === 'CL' ? 'Cl' : code), el('span', name)); names.append(tile); });
+  welcome.append(names, el('p', '1~15일차 · 다음에라는 말', 'edition'));
+  main.append(intro, welcome);
+}
+function introScreen(main) {
+  main.className = 'transfer-screen';
+  const box = el('section');
+  box.append(el('p', 'DAY 01 · 전학 첫날', 'eyebrow'), el('h1', '새로운 교실,\n새로운 만남.'), el('p', '오늘부터 이 학교에서 하루를 보낸다.\n교실 문 앞에서, 나를 부르는 목소리가 들린다.', 'subtitle'), button('이름 정하기 ▸', () => { screen = 'name'; }, false, 'primary'));
+  main.append(box);
 }
 function nameScreen(main) {
   main.className = 'name-screen'; const form = el('form', undefined, 'menu-card');
@@ -65,11 +111,11 @@ function nameScreen(main) {
   const input = el('input'); input.id = 'player-name'; input.name = 'name'; input.maxLength = 20; input.required = true; input.autocomplete = 'off'; input.placeholder = '1~20자';
   const submit = el('button', '등교하기', 'primary'); submit.type = 'submit';
   form.append(el('p', '전학 첫날', 'eyebrow'), el('h1', '이름을 알려 주세요.'), label, input, submit, button('돌아가기', () => { screen = 'title'; }));
-  form.addEventListener('submit', event => { event.preventDefault(); const name = input.value.trim(); if (!name) { input.setCustomValidity('공백이 아닌 이름을 입력해 주세요.'); input.reportValidity(); return; } state = fresh(name); screen = 'play'; message = ''; render(); });
+  form.addEventListener('submit', event => { event.preventDefault(); const name = input.value.trim(); if (!name || name.length > 20) { input.setCustomValidity('공백이 아닌 이름을 1~20자로 입력해 주세요.'); input.reportValidity(); return; } state = fresh(name); screen = 'play'; message = ''; render(); });
   input.addEventListener('input', () => input.setCustomValidity('')); main.append(form); requestAnimationFrame(() => input.focus());
 }
 function notebook() {
-  const box = el('aside', undefined, 'panel'); box.append(el('h2', panel === 'notes' ? '받은 핵심 노트' : '선택과 실제 경험'), button('닫기', () => { panel = ''; }));
+  const box = el('div', undefined, 'panel-content');
   if (panel === 'notes') {
     if (!state.notes.length) box.append(el('p', '아직 받은 핵심 노트가 없습니다.'));
     state.notes.forEach(n => {
@@ -118,6 +164,17 @@ function notebook() {
   }
   return box;
 }
+function modal() {
+  const dialog = el('dialog', undefined, 'panel'); dialog.setAttribute('aria-labelledby', 'panel-title');
+  const heading = el('div', undefined, 'panel-heading');
+  const title = el('h2', panel === 'notes' ? '받은 핵심 노트' : panel === 'records' ? '선택과 실제 경험' : panel === 'exam-material' ? '시험 제공 자료' : '게임 메뉴'); title.id = 'panel-title';
+  heading.append(title, button('닫기', closePanel)); dialog.append(heading);
+  if (panel === 'menu') { const menu = el('div', undefined, 'panel-content mobile-menu'); menu.append(...menuButtons(), button('도움말 ↗', help)); dialog.append(menu); }
+  else if (panel === 'exam-material') { const content = el('div', undefined, 'panel-content'); content.append(learningCard(EXAM[state.exam.index].card)); dialog.append(content); }
+  else dialog.append(notebook());
+  dialog.addEventListener('cancel', event => { event.preventDefault(); closePanel(); render(); });
+  return dialog;
+}
 function experiment() {
   const lab = state.lab; const task = lab.task;
   const box = el('section', undefined, 'lab'); box.setAttribute('aria-label', '전도성 시뮬레이터');
@@ -143,64 +200,118 @@ function experiment() {
   table.append(body); box.append(table, el('p', '꺼짐은 전류가 절대 0이라는 뜻이 아닙니다. 표시등만으로 이온 종류나 금속 존재를 식별하지 않습니다.', 'muted')); return box;
 }
 function playScreen(main) {
-  main.className = 'play-screen'; const meta = metadata(state);
-  const strip = el('section', undefined, 'day-strip'); strip.append(el('strong', `DAY ${String(meta.day).padStart(2, '0')}`), el('span', meta.time), el('span', meta.location), el('span', state.scene, 'scene-id')); main.append(strip);
-  if (meta.cast.length) {
-    const affinity = el('section', undefined, 'affinity'); affinity.setAttribute('aria-label', '현재 등장인물 호감도');
-    const meters = el('div', undefined, 'meters');
-    meta.cast.forEach(c => { const item = el('div'); const stage = RULES.stages.find(([n]) => state.affinity[c] >= n)[1]; item.append(el('span', `${c} · ${state.affinity[c]}/${RULES.max} · ${stage}`)); const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`); item.append(meter); meters.append(item); });
-    affinity.append(meters); main.append(affinity);
-  }
-  if (panel) main.append(notebook());
+  main.className = 'play-screen';
+  const meta = metadata(state);
   const current = state.queue[state.index];
+  const snap = snapPresentation(state);
+  main.dataset.snapPhase = snap?.phase || '';
   const stage = el('section', undefined, 'stage'); stage.setAttribute('aria-label', '캐릭터 영역');
-  const cast = meta.cast.join(' · ');
-  stage.append(el('span', meta.location, 'location-label'));
-  const portrait = el('div', undefined, 'portrait'); portrait.setAttribute('aria-label', cast ? `${cast} 이미지 영역 (비어 있음)` : '빈 이미지 영역'); stage.append(portrait);
-  stage.append(el('span', cast || '플레이어', 'character-name'), el('span', '캐릭터 이미지 미포함', 'image-note')); main.append(stage);
+  stage.dataset.location = meta.location;
+  if (snap) stage.append(snapBackdrop(snap.id));
+  else stage.append(el('span', meta.location, 'location-label'));
+  if (meta.cast.length && snap?.phase !== 'image') {
+    const affinity = el('section', undefined, `affinity ${snap ? 'snap-cast' : ''}`); affinity.setAttribute('aria-label', '현재 등장인물 호감도');
+    const meters = el('div', undefined, 'meters');
+    meta.cast.forEach(c => {
+      const item = el('div', undefined, `cast-slot ${current?.who === c ? 'speaking' : ''}`); item.dataset.character = c;
+      const relationship = RULES.stages.find(([n]) => state.affinity[c] >= n)[1];
+      const badge = el('div', undefined, 'cast-badge');
+      badge.append(el('strong', c), el('span', `${state.affinity[c]}/${RULES.max} · ${relationship}`));
+      const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`);
+      badge.append(meter); item.append(badge);
+      if (!snap) { const portrait = el('div', undefined, 'portrait'); portrait.setAttribute('aria-label', `${c} 이미지 준비 중`); portrait.append(el('span', c, 'character-name'), el('span', '이미지 준비 중', 'image-note')); item.append(portrait); }
+      meters.append(item);
+    });
+    affinity.append(meters); stage.append(affinity);
+  }
+  main.append(stage);
   if (state.scene === 'EX-PAPER' || state.scene === 'EX-RESULT') { main.append(examScreen()); return; }
-  if (current?.snap) { main.append(snapScreen(current)); return; }
+  if (current?.snap) {
+    main.append(snapScreen(snap));
+    main.addEventListener('click', event => { if (!event.target.closest(interactive)) nextLine(); });
+    return;
+  }
+  const center = el('div', undefined, 'scene-content');
   const dialogue = el('section', undefined, 'dialogue'); dialogue.setAttribute('aria-label', '대사창');
   const who = current?.who || (state.scene === 'DAY16-HANDOFF' ? '현재 제공 범위' : state.lab.task ? '가상 실험' : '선택');
   dialogue.append(el('h2', who.startsWith('플레이어') ? `${state.name}${who.includes('독백') ? ' · 독백' : ''}` : who, 'speaker'));
   const text = current?.text || (state.scene === 'DAY16-HANDOFF' ? '1~15일차 제공 범위가 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
-  if (current?.card) dialogue.append(learningCard(current.card));
-  else dialogue.append(el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text'));
-  if (current) dialogue.append(button('다음 ▸', () => { advance(state); message = ''; }, false, 'next'));
+  // Retain a card while its following explanation is spoken, without changing queue order.
+  const card = current?.card || (current?.who === '화학 교사' ? state.queue[state.index - 1]?.card : null);
+  if (card) {
+    const area = el('section', undefined, 'learning-area'); area.tabIndex = 0; area.setAttribute('aria-label', '수업 자료'); area.append(learningCard(card)); center.append(area);
+  }
+  const prose = el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text');
+  if (current && !card && text.length > 330) {
+    const area = el('section', undefined, 'learning-area lesson-prose'); area.tabIndex = 0; area.setAttribute('aria-label', who);
+    area.append(el('h3', who), prose); center.append(area);
+    dialogue.append(el('p', '위의 내용을 읽고 다음으로 이어가세요.', 'reading-hint'));
+  } else dialogue.append(prose);
+  if (current) {
+    dialogue.append(button('다음 ▸', next, false, 'next'));
+    dialogue.addEventListener('click', event => { if (!event.target.closest(interactive)) nextLine(); });
+  }
   else {
-    const choices = el('div', undefined, 'choices'); options(state).forEach(({ label, run, disabled }, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${label}`, () => { run(); message = ''; }, disabled)));
-    dialogue.append(choices);
+    const available = options(state);
+    if (available.length) {
+      const choices = el('section', undefined, 'choices'); choices.setAttribute('aria-label', '행동 선택');
+      choices.append(el('p', '어떤 마음을 전할까?', 'eyebrow'));
+      available.forEach(({ label, run, disabled }, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${label}`, () => { run(); message = ''; }, disabled)));
+      center.append(choices);
+    }
     if (state.scene === 'DAY16-HANDOFF') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
   }
-  main.append(dialogue);
-  if (state.scene.startsWith('C') && state.scene !== 'C-07') main.append(experiment());
+  if (state.scene.startsWith('C') && state.scene !== 'C-07' && !center.children.length) center.append(experiment());
+  if (center.querySelector('.learning-area, .lab')) main.classList.add('has-content');
+  main.append(center, dialogue);
 }
-function snapScreen(current) {
-  const snap = SNAPS[current.snap];
-  const box = el('section', undefined, 'dialogue snap'); box.setAttribute('aria-label', '이벤트 스냅');
-  box.append(el('p', '함께 보낸 순간', 'eyebrow'), el('h2', snap.name), el('p', snap.description));
-  if (!failedSnapImages.has(current.snap)) {
-    const image = el('img'); image.src = snap.image; image.alt = snap.description; image.style.maxWidth = '100%';
-    image.addEventListener('error', () => { failedSnapImages.add(current.snap); if (state.queue[state.index]?.snap === current.snap) render(); });
+function next() {
+  if (screen !== 'play' || panel || !state.queue[state.index] || ['EX-PAPER', 'EX-RESULT'].includes(state.scene)) return;
+  if (!revealSnap(state)) advance(state);
+  message = '';
+}
+function nextLine() { next(); render(); }
+function snapBackdrop(id) {
+  const snap = SNAPS[id];
+  const box = el('div', undefined, 'snap-backdrop'); box.dataset.snap = id;
+  if (!failedSnapImages.has(id)) {
+    const image = el('img'); image.src = snap.image; image.alt = snap.description;
+    image.addEventListener('error', () => { failedSnapImages.add(id); if (screen === 'play' && snapPresentation(state)?.id === id) render(); });
     box.append(image);
-  } else box.append(el('p', '이미지 준비 중 · 장면 설명으로 표시합니다. 계속 진행할 수 있습니다.', 'muted'));
-  box.append(button('스냅 닫고 계속', () => advance(state), false, 'next')); return box;
+  } else box.append(el('p', '이미지 준비 중', 'snap-fallback'));
+  return box;
+}
+function snapScreen(presentation) {
+  const snap = SNAPS[presentation.id];
+  const box = el('section', undefined, presentation.phase === 'image' ? 'snap image-phase' : 'dialogue snap'); box.setAttribute('aria-label', '이벤트 스냅');
+  if (presentation.phase === 'notice') box.append(el('h2', snap.name, 'speaker'), el('p', `${PEOPLE[snap.character]}와 함께한 순간을 열람했습니다.`, 'dialogue-text'));
+  box.append(button(presentation.phase === 'image' ? '스냅 정보 보기 ▸' : '스냅 닫고 계속', next, false, 'next'));
+  return box;
 }
 function examScreen() {
-  const box = el('section', undefined, 'dialogue exam'); box.setAttribute('aria-label', '첫 시험');
+  const box = el('section', undefined, 'exam'); box.setAttribute('aria-label', '첫 시험');
   const exam = state.exam;
   if (state.scene === 'EX-RESULT') {
     box.append(el('h2', `첫 시험 결과 · ${exam.result.score}/100점`));
+    const explanations = el('div', undefined, 'exam-explanations'); explanations.tabIndex = 0; explanations.setAttribute('aria-label', '문항별 해설');
     EXAM.forEach((q, i) => {
       const answer = exam.result.details[i].answer;
-      box.append(el('h3', `${i + 1}. ${q.prompt}`), el('p', `제출 답: ${answer === null ? '미응답' : q.options[answer]} · ${exam.result.details[i].points}점`), el('p', `정답: ${q.options[q.correct]}\n해설: ${q.explanation}`, 'pre'));
-      if (q.card) box.append(learningCard(q.card));
+      explanations.append(el('h3', `${i + 1}. ${q.prompt}`), el('p', `제출 답: ${answer === null ? '미응답' : q.options[answer]} · ${exam.result.details[i].points}점`), el('p', `정답: ${q.options[q.correct]}\n해설: ${q.explanation}`, 'pre'));
+      if (q.card) explanations.append(learningCard(q.card));
     });
+    box.append(explanations);
     box.append(button('결과 확인 · 시험 후 일과로', () => { finishExam(state, enterScene); save(); }, false, 'primary'));
   } else {
     const q = EXAM[exam.index];
-    box.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.', 'muted'), el('h3', q.prompt));
-    if (q.card) box.append(learningCard(q.card));
+    const heading = el('div', undefined, 'exam-heading');
+    const rules = el('details', undefined, 'exam-rules'); rules.append(el('summary', '시험 안내'), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.'));
+    heading.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), rules); box.append(heading);
+    const question = el('div', undefined, 'exam-question');
+    question.append(el('h3', q.prompt));
+    if (q.card) {
+      question.append(learningCard(q.card));
+      question.append(button('제공된 비교 자료 보기', () => openPanel('exam-material'), false, 'exam-material-toggle'));
+    }
     const answers = el('fieldset'); answers.append(el('legend', '답안 선택'));
     const count = el('p'); count.setAttribute('aria-live', 'polite');
     const updateCount = () => { count.textContent = `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`; };
@@ -210,22 +321,46 @@ function examScreen() {
       const radio = el('input'); radio.type = 'radio'; radio.name = q.id; radio.value = i; radio.checked = exam.answers[exam.index] === i;
       radio.addEventListener('change', () => { examAnswer(state, exam.index, i); updateCount(); });
       label.append(radio, el('span', text)); answers.append(label);
-    }); box.append(answers);
-    box.append(button('이전 문항', () => { exam.index--; }, exam.index === 0), button('다음 문항', () => { exam.index++; }, exam.index === EXAM.length - 1));
-    box.append(count);
-    box.append(button('답안 제출', () => { submitExam(state, enterScene); save(); }, false, 'primary'));
+    }); question.append(answers); box.append(question);
+    const controls = el('div', undefined, 'exam-navigation');
+    controls.append(count, button('이전 문항', () => { exam.index--; }, exam.index === 0), button('다음 문항', () => { exam.index++; }, exam.index === EXAM.length - 1), button('답안 제출', () => { submitExam(state, enterScene); save(); }, false, 'primary'));
+    box.append(controls);
   }
   return box;
 }
 function render() {
   const focusedLabel = document.activeElement?.textContent;
+  const position = `${screen}:${state?.day}:${state?.scene}:${state?.index}:${state?.queue[state.index]?.text}:${state?.exam.index}`;
+  const scrollPositions = position === renderedPosition ? [...app.querySelectorAll('.panel-content, .learning-area, .lab, .exam-question, .exam-explanations, .dialogue-text')].map(node => [node.className, node.scrollTop]) : [];
+  renderedPosition = position;
   app.replaceChildren(topbar()); const main = el('main');
-  if (screen === 'title') titleScreen(main); else if (screen === 'name') nameScreen(main); else playScreen(main);
-  app.append(main); const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status, el('footer', 'LOVE & CHEMISTRY — FRONTEND PROTOTYPE / 01'));
-  // 다음 대사에서 키보드 초점을 유지한다. 선택 후에는 다음 버튼으로 이동한다.
+  if (screen === 'splash') splashScreen(main); else if (screen === 'title') titleScreen(main); else if (screen === 'intro') introScreen(main); else if (screen === 'name') nameScreen(main); else playScreen(main);
+  app.append(main); const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status);
+  clearTimeout(statusTimer);
+  if (message) statusTimer = setTimeout(() => { status.textContent = ''; message = ''; }, 4000);
+  if (panel) { const dialog = modal(); dialog.append(status); app.append(dialog); dialog.showModal(); }
+  for (const [cls, top] of scrollPositions) app.getElementsByClassName(cls)[0]?.scrollTo(0, top);
   if (screen === 'play') {
-    const target = [...app.querySelectorAll('button:not(:disabled)')].find(b => b.textContent === focusedLabel) || app.querySelector('.next') || app.querySelector('.choices button:not(:disabled)') || app.querySelector('.lab button:not(:disabled)');
+    const root = panel ? app.querySelector('dialog') : app;
+    const target = [...root.querySelectorAll('button:not(:disabled)')].find(b => b.textContent === (restoreFocus || focusedLabel) && b.getClientRects().length) || (restoreFocus ? app.querySelector('.menu-toggle') : null) || root.querySelector('.next') || root.querySelector('.choices button:not(:disabled)') || root.querySelector('button:not(:disabled)');
     target?.focus({ preventScroll: true });
   }
+  restoreFocus = '';
 }
+document.addEventListener('keydown', event => {
+  if (event.repeat && event.key === 'Enter') { event.preventDefault(); return; }
+  if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'Enter' && !event.target.closest(interactive)) {
+    event.preventDefault();
+    if (screen === 'splash') { screen = 'title'; render(); }
+    else if (screen === 'intro') { screen = 'name'; render(); }
+    else if (screen === 'play' && !panel) nextLine();
+  }
+  if (event.key === 'Escape' && screen === 'play' && !panel) { openPanel('menu'); render(); }
+  if (['ArrowDown', 'ArrowUp'].includes(event.key) && event.target.closest('.choices')) {
+    event.preventDefault(); const choices = [...app.querySelectorAll('.choices button:not(:disabled)')];
+    choices[(choices.indexOf(document.activeElement) + (event.key === 'ArrowDown' ? 1 : choices.length - 1)) % choices.length]?.focus();
+  }
+});
 render();
+setTimeout(() => { if (screen === 'splash') { screen = 'title'; render(); } }, 650);

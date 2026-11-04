@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { menuAction } from './ui-driver.js';
 
 const KEY = 'love-chemistry.prototype.v1';
 async function load(page, state) {
@@ -6,7 +7,7 @@ async function load(page, state) {
   await page.reload(); await page.getByRole('button', { name: '불러오기', exact: true }).click();
 }
 async function save(page) {
-  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await menuAction(page, '저장');
   return page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);
 }
 const scores = s => ({ affinity: s.affinity, choices: s.choices, applied: s.applied, exam: s.exam });
@@ -30,8 +31,8 @@ for (const action of [1, 2]) test(`공통 4일차 수업: ${action === 1 ? '공�
   expect(result.exam.notes).toContain('D4-NOTE');
   expect(Object.keys(result.exam.period.met).sort()).toEqual(['C', 'H']);
   await load(page, result.lesson);
-  while (!await page.locator('.dialogue [data-card="periodic"]').count()) await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
-  const diagram = await page.locator('.dialogue .periodic-grid').textContent();
+  while (!await page.locator('.learning-area [data-card="periodic"]').count()) await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
+  const diagram = await page.locator('.learning-area .periodic-grid').textContent();
   expect(diagram).toContain('족 ↓ 세로 열'); expect(diagram).toContain('주기 → 가로 행');
   await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
   await expect(page.locator('.dialogue-text')).toHaveText(result.feedback);
@@ -40,7 +41,6 @@ for (const action of [1, 2]) test(`공통 4일차 수업: ${action === 1 ? '공�
   expect(await page.locator('.panel .periodic-grid').textContent()).toBe(diagram);
   await expect(page.locator('.panel')).toContainText(result.note);
   expect(await save(page)).toEqual(before);
-  await page.getByRole('button', { name: '닫기', exact: true }).click();
   // A pre-extension slot at the exam only stores received note IDs, not new cards.
   const old = structuredClone(result.exam); delete old.mid;
   await load(page, old);

@@ -118,9 +118,10 @@ test('10일차 종료 구형 슬롯에서 실제 화면으로 15일 밤·제공 
   const cards = new Set();
   async function drain() {
     for (let n = 0; n < 100; n++) {
-      const card = await page.locator('.dialogue .learning-card').count() ? await page.locator('.dialogue .learning-card').getAttribute('data-card') : null;
+      const card = await page.locator('.learning-area .learning-card').count() ? await page.locator('.learning-area .learning-card').getAttribute('data-card') : null;
       if (card) cards.add(card);
       if (await page.getByRole('button', { name: '다음 ▸', exact: true }).count()) await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
+      else if (await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).count()) await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).click();
       else if (await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).count()) await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).click();
       else break;
     }
@@ -242,10 +243,11 @@ for (const code of ['H', 'HE', 'C', 'NA', 'MG', 'CA', 'CL']) test(`${code} 신�
     await page.evaluate(([key, s]) => localStorage.setItem(key, JSON.stringify(s)), [KEY, s]); await page.reload();
     await page.getByRole('button', { name: '불러오기', exact: true }).click();
     if (s === states.pre) await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
-    await expect(page.locator('.snap')).toContainText('장면 설명으로 표시');
+    await expect(page.locator('.snap-backdrop')).toContainText('이미지 준비 중');
     await page.getByRole('button', { name: '저장', exact: true }).click();
     const during = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);
     await page.reload(); await page.getByRole('button', { name: '불러오기', exact: true }).click();
+    await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).click();
     await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).click();
     await expect(page.locator('.dialogue-text')).toHaveText(during.queue[during.index + 1].text);
     await page.getByRole('button', { name: '저장', exact: true }).click();

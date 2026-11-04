@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { beginNew } from './ui-driver.js';
 
 const KEY = 'love-chemistry.prototype.v1';
 async function drain(page) {
@@ -31,7 +32,7 @@ async function seed(page, scene, { code = null, day = 2, promises = {} } = {}) {
   await page.getByRole('button', { name: '불러오기', exact: true }).click();
 }
 async function actualDay2(page, place) {
-  await page.goto('/'); await page.getByRole('button', { name: '새 게임', exact: true }).click();
+  await page.goto('/'); await beginNew(page);
   await page.getByLabel('학교에서 불릴 이름').fill('재현'); await page.getByRole('button', { name: '등교하기', exact: true }).click();
   for (const i of [0, 0, 0, 2, 2, 0, 0, 0, 0, place, 0, 0]) await pick(page, i);
 }
@@ -136,6 +137,7 @@ for (const [code, name] of Object.entries({ H: '수소', HE: '헬륨', C: '탄�
       if (boundary >= 0 && s.queue[boundary].snap) {
         await expect(page.locator('.snap')).toBeVisible();
         const atSnap = await restore(page);
+        await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).click();
         await expect(page.locator('.affinity')).toContainText(name);
         await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).click();
         const after = await restore(page);

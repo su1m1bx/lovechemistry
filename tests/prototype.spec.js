@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { beginNew, menuAction } from './ui-driver.js';
 
 const key = 'love-chemistry.prototype.v1';
 async function drain(page) {
@@ -10,11 +11,11 @@ async function pick(page, n) {
   await drain(page); await page.locator('.choices button').nth(n).click(); await drain(page);
 }
 async function saved(page) {
-  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await menuAction(page, '저장');
   return page.evaluate(k => JSON.parse(localStorage.getItem(k)), key);
 }
 async function start(page) {
-  await page.goto('/'); await page.getByRole('button', { name: '새 게임', exact: true }).click();
+  await page.goto('/'); await beginNew(page);
   await page.getByLabel('학교에서 불릴 이름').fill('테스터'); await page.getByRole('button', { name: '등교하기' }).click();
   await expect(page.locator('.dialogue-text')).toContainText('테스터, 맞지?');
 }
@@ -158,11 +159,11 @@ test('모바일, 손상 저장, 저장 실패, 이름의 HTML 안전성', async 
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/');
   await page.evaluate(k => localStorage.setItem(k, '{broken'), key);
   await page.getByRole('button', { name: '불러오기', exact: true }).click(); await expect(page.getByRole('status')).toContainText('불러오기 실패');
-  await page.getByRole('button', { name: '새 게임', exact: true }).click(); await page.getByLabel('학교에서 불릴 이름').fill('<b>이름</b>'); await page.getByRole('button', { name: '등교하기' }).click();
+  await beginNew(page); await page.getByLabel('학교에서 불릴 이름').fill('<b>이름</b>'); await page.getByRole('button', { name: '등교하기' }).click();
   await expect(page.locator('.dialogue-text')).toContainText('<b>이름</b>'); await expect(page.locator('.dialogue-text b')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('quota'); }; });
-  await page.getByRole('button', { name: '저장', exact: true }).click(); await expect(page.getByRole('status')).toContainText('저장하지 못했습니다');
+  await menuAction(page, '저장'); await expect(page.getByRole('status')).toContainText('저장하지 못했습니다');
 });
 
 for (const [place, action] of [[0, 0], [1, 1], [2, 2], [4, 0]]) test(`1일차 비대면 장소 ${place}, 행동 ${action}, 호감도 0에서도 수소 동행`, async ({ page }) => {
@@ -221,11 +222,11 @@ test('기록은 만남·무례한 대화·실측 결과를 읽기 쉽게 보여 
   await expect(panel).toContainText('식염수: 미측정');
   await expect(panel).not.toContainText(/A-0|B-0|C-0|hMet|naMet|takeover|requested|actual|true|false|\{|\}/);
   await expect(panel.locator('pre')).toHaveCount(0);
-  const text = await panel.textContent();
+  const text = await panel.locator('.panel-content').textContent();
   expect(await saved(page)).toEqual(before);
   await page.reload(); await page.getByRole('button', { name: '불러오기', exact: true }).click();
   await page.getByRole('button', { name: '기록', exact: true }).click();
-  expect(await panel.textContent()).toBe(text);
+  expect(await panel.locator('.panel-content').textContent()).toBe(text);
   expect(await saved(page)).toEqual(before);
 });
 

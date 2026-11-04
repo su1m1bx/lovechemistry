@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { beginNew, menuAction } from './ui-driver.js';
 
 const SAVE_KEY = 'love-chemistry.prototype.v1';
 const people = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', MG: '마그네슘', CA: '칼슘', CL: '염소' };
@@ -6,7 +7,7 @@ const placeFor = { H: 3, HE: 0, C: 2, NA: 1, MG: 1, CA: 4, CL: 3 };
 const available = { H: [2, 6, 9], HE: [2, 4, 7], C: [2, 5, 9], NA: [2, 5, 8], MG: [3, 6], CA: [2, 4, 8], CL: [3, 7] };
 const scene = page => page.locator('.scene-id').textContent();
 async function save(page) {
-  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await menuAction(page, '저장');
   return page.evaluate(key => JSON.parse(localStorage.getItem(key)), SAVE_KEY);
 }
 async function restore(page) {
@@ -18,10 +19,12 @@ async function drain(page, snaps = []) {
   for (let n = 0; n < 100; n++) {
     if (await page.getByRole('button', { name: '다음 ▸', exact: true }).count()) {
       await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
+    } else if (await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).count()) {
+      await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).click();
     } else if (await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).count()) {
       const state = await restore(page); const id = state.queue[state.index].snap; snaps.push(id);
       expect(state.snaps[id]).toBeTruthy();
-      await expect(page.getByRole('region', { name: '이벤트 스냅' })).toContainText('이미지');
+      await expect(page.locator('.snap-backdrop')).toContainText('이미지 준비 중');
       await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).click();
       const after = await restore(page);
       expect(after.affinity).toEqual(state.affinity); expect(after.applied).toEqual(state.applied); expect(after.snaps).toEqual(state.snaps);
@@ -33,7 +36,7 @@ async function choose(page, i, snaps = []) {
   await drain(page, snaps); await page.locator('.choices button').nth(i).click(); await drain(page, snaps);
 }
 async function start(page) {
-  await page.goto('/'); await page.getByRole('button', { name: '새 게임', exact: true }).click();
+  await page.goto('/'); await beginNew(page);
   await page.getByLabel('학교에서 불릴 이름').fill('확장검증'); await page.getByRole('button', { name: '등교하기' }).click();
   for (const i of [1, 0, 0, 3, 0, 1, 1, 0, 0]) await choose(page, i);
   expect(await scene(page)).toBe('B-04');
@@ -99,7 +102,7 @@ async function finish10(page, code = null) {
   await choose(page, code ? 1 : 0);
   if (code) await choose(page, 0);
   await expect(page.locator('.scene-id')).toHaveText('DAY11-HANDOFF');
-  await expect(page.locator('.dialogue')).toContainText('11일차로 이어가기');
+  await expect(page.locator('.choices')).toContainText('11일차로 이어가기');
   return save(page);
 }
 
@@ -234,14 +237,15 @@ test('스냅 실제 이미지 로드와 실패 대체 모두 진행·점수에 �
   await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
   await expect(page.locator('.speaker')).toHaveText('수소');
   await page.getByRole('button', { name: '다음 ▸', exact: true }).click();
-  await expect(page.locator('.snap img')).toBeVisible();
-  expect(await page.locator('.snap img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('.snap-backdrop img')).toBeVisible();
+  expect(await page.locator('.snap-backdrop img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
   const before = await restore(page);
   await page.unroute('**/assets/snaps/SNAP-H.webp');
   await page.route('**/assets/snaps/SNAP-H.webp', route => route.abort());
   await page.reload(); await page.getByRole('button', { name: '불러오기', exact: true }).click();
-  await expect(page.locator('.snap')).toContainText('장면 설명으로 표시');
+  await expect(page.locator('.snap-backdrop')).toContainText('이미지 준비 중');
   expect((await save(page)).affinity).toEqual(before.affinity);
+  await page.getByRole('button', { name: '스냅 정보 보기 ▸', exact: true }).click();
   await page.getByRole('button', { name: '스냅 닫고 계속', exact: true }).click();
   await expect(page.locator('.dialogue')).toContainText('지도는 다음에 다시 펼치자.');
   expect((await save(page)).applied).toEqual(before.applied);
