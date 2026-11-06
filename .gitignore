@@ -5,3 +5,24 @@ coverage/
 playwright-report/
 test-results/
 *.local
+
+# Local environment, editor state, and temporary output
+.env
+.env.*
+!.env.example
+.obsidian/
+.idea/
+.vscode/
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Internal planning and agent work; runtime Markdown stays public
+/agents/
+/docs/[0-9][0-9]_*.md
+/docs/character-designs.md
+/docs/Tlqkf.md
+/docs/무제.md
+/docs/엄.md
+/docs/지피티한테 코드 짜달라고 하고 그거 복붙ㄱㄱ.md
