@@ -1,7 +1,7 @@
 import science from '../docs/science-reference.md?raw';
 import { rows, sceneText } from './script.js';
-import { RULES } from './config.js';
 import { LESSON_NOTES } from './learning.js';
+import { choiceRows } from './choice-content.js';
 export { SNAPS } from './snaps.js';
 
 export const PEOPLE = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', MG: '마그네슘', CA: '칼슘', CL: '염소' };
@@ -22,6 +22,11 @@ export const SCHEDULE = {
   13: { 옥상: ['H'], 복도: ['NA'], 교실: ['C'], 도서관: ['CL'] },
   14: { 복도: ['MG'], 교실: ['C'], 도서관: ['CL'], 운동장: ['CA'] },
   15: { 옥상: ['HE'], 복도: ['NA', 'MG'], 교실: ['C'], 도서관: ['H', 'CL'], 운동장: ['CA'] },
+  16: { 복도: ['NA'], 교실: ['C'], 도서관: ['H'] },
+  17: { 옥상: ['HE'], 복도: ['MG'], 도서관: ['CL'], 운동장: ['CA'] },
+  18: { 옥상: ['HE'], 교실: ['C'], 도서관: ['H'] },
+  19: { 복도: ['NA', 'MG'], 도서관: ['CL'], 운동장: ['CA'] },
+  20: { 옥상: ['HE'], 복도: ['NA', 'MG'], 교실: ['C'], 도서관: ['H', 'CL'], 운동장: ['CA'] },
 };
 // 점심(급식 뒤)의 배치와 선택지 표시는 같은 원본을 사용한다.
 export const lunchPeople = (day, place) => SCHEDULE[day]?.[place] || [];
@@ -75,16 +80,16 @@ export const introduction = code => {
 export const meetOptions = code => bullets(`MEET-${code}`).filter(l => l.startsWith('- 선택')).map(l => {
   const q = quotes(l); return { label: q[0], response: q[1] };
 });
-export const mainRows = id => rows(id);
+export const mainRows = (id, s) => choiceRows(id, s, rows(id));
 export const repeatRow = code => rows('TALK-REPEAT').find(r => r[0].startsWith(PEOPLE[code] + ' '));
 export const followRow = code => rows('LAB-FOLLOW').find(r => r[0].startsWith(PEOPLE[code] + ','));
 export const quietLine = (id, code) => actorLines(bullets(id).find(l => l.includes('수소 “')) || '').find(q => q.who === PEOPLE[code]);
 
 // 승인된 추천표. 조건부 변화와 1회 적용은 엔진에서 처리하며 UI는 계산하지 않는다.
-const UP = 4; const LAB = 5; const DOWN = RULES.down;
+const UP = 4; const LAB = 5;
 export const RELATIONS = {
-  'RE-H': [UP, 0, UP], 'RE-HE': [3, 0], 'RE-C': [UP, DOWN, UP], 'RE-NA': [UP, 0, 0],
+  'RE-H': [UP, 0, UP], 'RE-HE': [3, 0], 'RE-C': [UP, 0, UP], 'RE-NA': [UP, 0, 0],
   'RE-MG': [UP, 0], 'RE-CA': [UP, 0, UP], 'RE-CL': [UP, 0],
   'LAB-H': [LAB, 0], 'LAB-HE': [4, 0], 'LAB-C': [LAB, 0, LAB], 'LAB-NA': [LAB, 0, LAB],
-  'LAB-MG': [LAB, 0, DOWN], 'LAB-CA': [LAB, 0], 'LAB-CL-read': [LAB, LAB],
+  'LAB-MG': [LAB, 0, 0], 'LAB-CA': [LAB, 0], 'LAB-CL-read': [LAB, LAB],
 };

@@ -1,6 +1,7 @@
 import { PEOPLE, PLACES, lunchPeople, lunchPlaceLabel, stage } from './period.js';
 import { MID_LESSONS, midLessonQueue, midLessonFeedback, lessonCards } from './learning.js';
 import { initMid, uncomfortable } from './chronology.js';
+import { pastMeaning } from './choice-content.js';
 import { d, me, MORNINGS, RECESSES, INTRO, SEEDS, INVITES, HINTS, CONSENT, PLAYS, PLAY_END, SHARED_KEYS,
   echoContent, nextContent, lateContent, PERSONAL, MID_TITLES } from './mid-content.js';
 
@@ -98,7 +99,7 @@ export function midScene(s, id, api) {
     const thoughts = { H: '안내할 길이 없어도 같이 듣고 싶은 소리가 생겼다.', HE: '대신 끝내 주지 않은 모형이어서 남은 시간이 있었다.', C: '좋다는 평가보다, 다음에 보여 주고 싶은 게 생긴 표정이 남았다.', NA: uncomfortable(s) ? '말을 끝까지 듣는 한 번으로 전부 돌아오진 않는다. 다음에도 내 결론으로 덮지 말아야겠다.' : '같은 답을 쓰지 않아도 줄은 나란히 놓일 수 있었다.', MG: '쓸모없는 공연에서 다음 첫 박자를 기다리게 됐다.', CA: '다음 수보다 같이 둘 사람의 반응이 궁금해졌다.', CL: '정답을 고치지 않고 다음 한 줄을 기대하는 시간도 있었다.' };
     q = [me(who ? thoughts[who] : '오늘 더 가까워졌다고 말할 수는 없어도, 아직 말을 걸 수 있는 날은 남아 있다.')];
     if (who) q.push(me(s.affinity[PEOPLE[who]] < 15 ? '서로의 취향을 하나 더 아는 정도.' : s.affinity[PEOPLE[who]] < 30 ? '다시 이야기하고 싶은 친구.' : '다음에 만나고 싶은 이유가 그 취미만은 아닐지도 모른다.'));
-  } else if (id === 'DAY16-HANDOFF') { s.time = '범위 종료'; s.location = '15일차 완료'; q = [me('내일의 빈칸은 아직 내가 고를 수 있다.'), { who: '현재 제공 범위', text: '여기까지가 현재 제공된 1~15일차 범위입니다. 다음 학교생활로 이어집니다. 20일차 시험·30일차 방학식과 엔딩은 아직 포함되지 않습니다.', kind: 'narration' }]; }
+  } else if (id === 'DAY16-HANDOFF') { s.time = '다음 등교'; s.location = '15일차 완료'; q = [me('내일의 빈칸은 아직 내가 고를 수 있다.')]; }
   s.eventId = `MID:${s.day}:${id}:${p.person || 'PLAYER'}${id === 'MID-REST' ? ':' + s.time : ''}`;
   api.queue(s, clone(q), after); return true;
 }
@@ -168,8 +169,14 @@ export function midOptions(s, api) {
       choice.lines = choice.lines.filter(line => !line.snap || !s.snaps[line.snap] && (c !== 'HE' || m.heAgreementDay === 12));
       if (c === 'H') choice.lines.push(d(c, i === 0 ? hasR(s, c) ? '안내할 일이 없어도 불러도 되겠네.' : '다음에 또 다른 소리가 들리는지 물어봐야겠다.' : '오늘은 이 창가를 기억할게.'));
       else choice.lines.push(d(c, c === 'HE' && m.metDates.HE === 15 ? '다음에도 같이 볼지는 그때 물어볼게.' : PLAY_END[c]));
-      if (c === 'C' && i === 0 && p.promises.carbonFocus) choice.lines.push(d(c, '네가 무난한 쪽을 권했던 건 기억해. 오늘 내 쪽도 남긴 건 다른 얘기야.'));
-      if (c === 'MG' && i === 0 && Object.entries(s.choices).some(([k, v]) => /:LAB-MG:MG$/.test(k) && v === 2)) choice.lines.push(d(c, '오늘은 고치기 전에 즐겨 보는 쪽이구나.'));
+      if (c === 'C' && i === 0 && (p.promises.carbonFocus || pastMeaning(s, 'RE-C'))) choice.lines.push(d(c, {
+        'C-READABILITY': '게시물에선 큰 제목을 골랐지. 여기선 이 작은 무늬가 잘 보이네.',
+        'C-FOCUS-LEGACY': '집중할 건 하나여도, 내가 갖고 있을 종이까진 한 장일 필요 없겠네.',
+      }[pastMeaning(s, 'RE-C')] || '이 종이는 내가 여기 넣어 둘게.'));
+      if (c === 'MG' && i === 0 && pastMeaning(s, 'LAB-MG')) choice.lines.push(d(c, {
+        'MG-OBSERVE-NOTES': '그땐 바뀐 데 적었지. 오늘은 소리 쪽이네.',
+        'MG-HALT-LEGACY': '설명서는 덜 됐지만 오늘 공연은 해 봤네.',
+      }[pastMeaning(s, 'LAB-MG')] || '오늘 네 소리는 들었어.'));
     });
     return response(entries, 'play', 'MID-CLOSE', i => c === 'HE' ? i === 0 ? m.heAgreementDay === 12 ? 8 : 4 : 0 : i === 0 ? hasR(s, c) && !(c === 'NA' && uncomfortable(s)) ? 8 : 5 : i === 1 ? 5 : 0);
   }

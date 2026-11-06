@@ -13,11 +13,19 @@ export const CARDS = {
   carbon: { title: '같은 탄소, 다른 배열', type: 'carbon', caption: '설명용 모형 · 연필심 전체가 순수 흑연인 것은 아님', feedback: '원자의 종류는 둘 다 탄소입니다. 같은 원소지만 배열이 다른 이런 물질을 동소체라고 해요. 흑연은 전기가 통해요.' },
   magnesium: { title: '같은 족도 모든 성질이 같지는 않아', headers: ['제공된 자료', '족', '찬물에서의 반응'], rows: [['Mg', '2족', 'Ca보다 훨씬 느림'], ['Ca', '2족', '물과 반응']], caption: '자료 비교 · 실제 금속 조작 없음', feedback: '속도가 반드시 같을까요? 아니에요. 제시된 조건에서 차이가 있습니다.' },
   observation: { title: '관찰과 설명을 다른 칸에', headers: ['구분', '교사 제공 예시'], rows: [['관찰', '식염수 측정에서 표시등 켜짐'], ['노트로 설명', '용액의 이온 이동으로 전류가 흐름']], caption: '교사 제공 예시 · 플레이어의 새 실측이 아님', feedback: '이 표시만으로 이온의 종류를 식별한 것은 아닙니다. 다른 모든 용질을 확인한 것도 아니에요.' },
+  providedRecords: { title: '교사 제공 예시 기록', headers: ['시료', '측정 여부', '표시등'], rows: [['고체 식염', '측정', '꺼짐'], ['순수한 물', '측정', '꺼짐'], ['식염수', '측정', '켜짐']], caption: '교사 제공 가상 시뮬레이터 예시 · 같은 기기 감도 · 플레이어의 C 실측과 별도', feedback: '식염수 칸의 켜짐은 관찰, 이온이 움직여 전류를 운반한다는 문장은 설명입니다. 실험하지 않은 여러분의 기록으로 옮기지는 마세요.' },
+  unmeasuredRecord: { title: '다른 모둠의 기록', headers: ['시료', '측정 여부', '표시등'], rows: [['식염수', '측정', '켜짐'], ['순수한 물', '미측정', '미측정']], caption: '교사 제공 예시와 별개의 기록 · 플레이어의 새 실측 아님', feedback: '수업의 예시 결과를 다른 모둠의 관찰로 옮기지 않는다.' },
+  comparisonConditions: { title: '비교 조건', headers: ['같은 기기 감도·별도 깨끗한 시료', '감도와 시료 둘 다 변경'], rows: [['같은 설정에서 물과 식염수 비교', '감도와 시료를 함께 변경']], caption: '교사 제공 조건표 · 기기 조작 없음', feedback: '용매만인 물과 비교하려면 같은 감도로 봐야겠죠. 감도도 시료도 바꾸면 어느 차이 때문인지 이 표만으로는 말하기 어렵습니다.' },
+  coldWaterComparison: { title: '같은 족, 같은 찬물 조건의 비교', headers: ['원소', '족', '같은 찬물 조건에서의 반응'], rows: [['Mg', '2족', 'Ca보다 훨씬 느림'], ['Ca', '2족', '물과 반응']], caption: '교사 제공 비교 자료 · 실제 금속 조작 없음', feedback: '같은 족이라는 사실과 같은 속도라는 주장은 다릅니다. 차이는 지금 받은 표에서 읽으세요.' },
+  forms: { title: '기호·명칭과 형태', headers: ['기호', '명칭·형태'], rows: [['H₂', '수소 분자'], ['H₂O', '물 분자'], ['Na', '금속'], ['Na⁺', '이온'], ['Cl₂', '염소 분자'], ['Cl⁻', '염화 이온']], caption: '기호·형태 비교 · 인물의 성격은 원소의 실제 성질·능력을 뜻하지 않음', feedback: '이온 종류를 적으려면 시료 라벨과 배운 설명도 필요해요. 불빛만 보고 소금이라고 단정한 문장은 고칩시다.' },
+  graphiteEvidence: { title: '흑연의 전도성', headers: ['제공 자료', '판단'], rows: [['흑연은 탄소로 이루어진 비금속 물질이며 전기가 통한다.', '‘모든 비금속은 전기가 통하지 않는다’의 반례다.']], feedback: '한 반례로 모든 비금속이 통하지 않는다는 전칭 주장을 반박할 수 있다.' },
 };
 export const NOTE_CARDS = {
   'A-02': ['molecules'], 'B-02': ['ions', 'materials', 'conduction'], 'C-01': ['conduction'],
   'D3-NOTE': ['ions'], 'D4-NOTE': ['periodic', 'shells', 'exceptions'], 'D5-NOTE': ['history'], 'D6-NOTE': ['carbon'], 'D8-NOTE': ['magnesium'],
   'D11-NOTE': ['molecules'], 'D12-NOTE': ['ions'], 'D13-NOTE': ['periodic'], 'D14-NOTE': ['conduction'], 'D15-NOTE': ['observation'],
+  'D16-NOTE': ['providedRecords', 'unmeasuredRecord', 'conduction'], 'D17-NOTE': ['comparisonConditions'],
+  'D18-NOTE': ['shells', 'coldWaterComparison', 'ions'], 'D19-NOTE': ['forms', 'graphiteEvidence'],
 };
 export const LESSON_NOTES = {
   'A-02': '원소는 양성자 수로 구분하는 원자의 종류다. H₂는 수소 원자 두 개가 결합한 홑원소 물질, H₂O는 수소와 산소가 결합한 화합물이다.',

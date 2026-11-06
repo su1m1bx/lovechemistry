@@ -4,6 +4,7 @@ import { title } from './script.js';
 import { lessonCards } from './learning.js';
 import { personalEligible } from './mid.js';
 import { uncomfortable } from './chronology.js';
+import { enterChoiceContent, recordMeaning, choiceAmount, pastMeaning } from './choice-content.js';
 import { PEOPLE, PLACES, lunchPeople, lunchPlaceLabel, MET_EVENTS, say, stage, bullets, quotes, clean, actorLines,
   dayParts, PERIOD_NOTES, EXAM, EXAM_POINTS, SNAPS, invitation, introduction, meetOptions,
   mainRows, repeatRow, followRow, quietLine, RELATIONS } from './period.js';
@@ -36,6 +37,7 @@ export function periodScene(s, id, api) {
   const { queue } = api; const p = s.period; const code = p.person; const person = PEOPLE[code];
   s.scene = id;
   s.eventId = event(s, id);
+  enterChoiceContent(s, id);
   let q = [];
   let after = null;
   if (/^D[3-9]-AM$/.test(id)) {
@@ -93,7 +95,10 @@ export function periodScene(s, id, api) {
       q = [chlorineReview(), ...actorLines(bullets(id)[1])];
     } else {
       q = actorLines(bullets(id).filter(l => !l.includes('**조건') && !l.includes('**앞선')).join('\n'));
-      if (code === 'C' && p.promises.carbonFocus) q.push(say(person, '네가 말한 집중 효과는 알겠어. 다만 남길 자리도 고민하고 있어.'));
+      if (code === 'C' && (p.promises.carbonFocus || pastMeaning(s, 'RE-C'))) q.push(say(person, {
+        'C-READABILITY': '큰 제목 쪽에 한 표였지. 개인 건 이쪽에 둘게.',
+        'C-FOCUS-LEGACY': '한 장에 집중하자는 얘기도 생각해 봤어. 그래도 이건 내 공책에 남기려고.',
+      }[pastMeaning(s, 'RE-C')] || '게시할 건 이쪽, 내가 보관할 건 저쪽.'));
       if (code === 'CA' && p.promises.caLunchStop) q.push(say(person, '전에 정한 데서 멈췄으니 이번에도 믿고 물어볼게요.'));
       if (code === 'CA') q.splice(1, 0, stage('자료 검토를 마친다.'));
       if (code === 'MG') q.splice(-1, 0, stage('종이 모형의 동작이 어긋나자 마그네슘이 설명 없이 접는 곳을 바꾼다.'));
@@ -139,6 +144,7 @@ export function periodOptions(s, api) {
   const select = (label, i, response, target, { amount = 0, effect = {}, rewardKey = s.eventId } = {}) => option(label, () => {
     if (s.scene !== id || s.eventId !== eventKey) return;
     if (!record(s, eventKey, i)) return;
+    recordMeaning(s, id, i);
     score(s, rewardKey + ':relation', person, amount);
     p.history.push({ day: s.day, who: person || '플레이어', title: title(id) || title(id.split('-read')[0]) || '학교생활', text: label });
     // 효과는 즉시 응답을 실제로 마친 뒤 복귀 줄에 도달할 때 기록한다.
@@ -184,9 +190,9 @@ export function periodOptions(s, api) {
   }));
   if (['LUNCH-STUDY', 'LUNCH-SKIP', 'LUNCH-EMPTY'].includes(id)) return [select(id === 'LUNCH-STUDY' ? '노트 재열람 마치기' : id === 'LUNCH-SKIP' ? '쉬는 시간 마치기' : '혼자 둘러보고 마치기', 0, [say('플레이어', id === 'LUNCH-STUDY' ? '확인한 데까지만 기억해 두자.' : '다음 일과로 가자.')], lunchEnd(s))];
   if (id.startsWith('MEET-')) return meetOptions(code).map((o, i) => select(o.label, i, [say(person, o.response)], i === 0 ? s.day === 10 ? `EX-${code}` : `RE-${code}` : lunchEnd(s)));
-  if (id.startsWith('RE-')) return mainRows(id).map((row, i) => {
+  if (id.startsWith('RE-')) return mainRows(id, s).map((row, i) => {
     const effect = code === 'CA' && i === 0 ? { caLunchStop: true, caPlayed: true } : code === 'CA' && i === 2 ? { caPlayed: true } : code === 'C' && i === 1 ? { carbonFocus: true } : {};
-    const o = finishLunch(responseLines(id, i), i, clean(row[0]), RELATIONS[id][i], effect);
+    const o = finishLunch(responseLines(id, i, s), i, clean(row[0]), choiceAmount(s, id, i, RELATIONS[id][i]), effect);
     const run = o.run; o.run = () => { if (Object.hasOwn(s.choices, s.eventId)) return; run(); s.queue.at(-1).complete = { type: 're', code }; }; return o;
   });
   if (id === 'TALK-REPEAT') return repeatRow(code).slice(1).map((text, i) => {
@@ -222,8 +228,8 @@ export function periodOptions(s, api) {
     }));
     return result;
   }
-  if (/^LAB-(H|HE|C|NA|MG|CA)$/.test(id)) return mainRows(id).map((row, i) => {
-    let amount = RELATIONS[id][i]; const effect = {}; let snap = i === 0 && ['H', 'C', 'NA', 'MG'].includes(code) ? `SNAP-${code}` : null;
+  if (/^LAB-(H|HE|C|NA|MG|CA)$/.test(id)) return mainRows(id, s).map((row, i) => {
+    let amount = choiceAmount(s, id, i, RELATIONS[id][i]); const effect = {}; let snap = i === 0 && ['H', 'C', 'NA', 'MG'].includes(code) ? `SNAP-${code}` : null;
     if (code === 'HE' && i === 0) effect.heAgreement = true;
     if (code === 'C' && i === 0) effect.carbonSaved = true;
     if (code === 'NA') { effect.naTaste = true; if (isRude(s) && amount > 0) amount = 0; }
@@ -231,10 +237,10 @@ export function periodOptions(s, api) {
     if (code === 'MG' && i === 0) effect.mgAttempt = true;
     if (code === 'CA' && i === 0) { effect.caPlayed = true; effect.caLabStop = true; if (p.promises.caLunchStop) { amount = RULES.major; snap = 'SNAP-CA'; } }
     const returnLine = quotes(row[3]).at(-1);
-    return finishLab(clean(row[0]), i, responseLines(id, i), returnLine, amount, snap, effect);
+    return finishLab(clean(row[0]), i, responseLines(id, i, s), returnLine, amount, snap, effect);
   });
   if (id === 'LAB-CL') return [select('여기서만 읽어 볼게', 0, [say(person, '응. 읽고 떠오른 걸 말해 줘.')], 'LAB-CL-read', { effect: { clPrivate: true } }),
-    finishLab('오늘은 읽지 않을게. 허락해 준 건 고마워.', 1, [say(person, '알겠어. 보여 주는 것처럼 읽는 것도 선택이니까.')], '그럼 오늘은 안내문만 정리하자.', 0, null)];
+    finishLab('오늘은 읽지 않을게. 허락해 준 건 고마워.', 1, responseLines('LAB-CL', 2), '그럼 오늘은 안내문만 정리하자.', 0, null)];
   if (id === 'LAB-CL-read') return mainRows('LAB-CL').slice(0, 2).map((row, i) => finishLab(clean(row[0]), i, responseLines('LAB-CL', i), quotes(row[3]).at(-1), 5, i === 0 ? 'SNAP-CL' : null, { clRead: true }));
   if (id === 'LAB-FOLLOW') {
     const promise = p.promises;

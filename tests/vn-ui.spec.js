@@ -171,7 +171,7 @@ for (const image of ['missing', 'loaded']) test(`14종 구형·신형 스냅: ${
     await page.reload(); await menuAction(page, '불러오기');
     await expect(page.locator('.dialogue-text')).toHaveText(expected.queue[expected.index].text.replaceAll('{플레이어명}', expected.name));
     await expect(page.locator('main')).toHaveAttribute('data-snap-phase', 'follow');
-    if (image === 'loaded') expect(await page.locator('.snap-backdrop img').evaluate(n => n.complete && n.naturalWidth > 0)).toBe(true);
+    if (image === 'loaded') await expect.poll(() => page.locator('.snap-backdrop img').evaluate(n => n.complete && n.naturalWidth > 0)).toBe(true);
     else await expect(page.locator('.snap-fallback')).toBeVisible();
     // A pre-UI save made during follow-up derives the same background without replaying effects.
     delete expected.ui; await loadState(page, expected);

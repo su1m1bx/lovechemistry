@@ -7,6 +7,10 @@ import { initMid, metOn, completeMid, syncLegacyHistory } from './chronology.js'
 import { midScene, midOptions, midSceneId } from './mid.js';
 import { MID_TITLES, SHARED_KEYS } from './mid-content.js';
 import { CARDS, lessonCards } from './learning.js';
+import { initChoiceContent, validChoiceContent } from './choice-content.js';
+import { initExam2, secondScene, secondSceneId, validExam2 } from './second-term.js';
+import { lateScene, lateOptions, lateSceneId } from './late.js';
+import { commitLate, validLate, validLateCommit } from './late-state.js';
 
 const LEGACY_SCENES = {
   'A-01': [1, '아침', '교실 앞 복도', ['H']], 'A-02': [1, '수업', '교실', ['H']],
@@ -23,7 +27,7 @@ function legacyMetadata(s, id) {
   if (id === 'A-04-action') s.cast = lunchPeople(s.day, s.place);
   s.eventId = `DAY-${s.day}:${id}`;
 }
-const api = () => ({ enter, queue, score, record, notes: { ...NOTES, ...PERIOD_NOTES } });
+const api = () => ({ enter, queue, score, record, people: PEOPLE, notes: { ...NOTES, ...PERIOD_NOTES } });
 
 export const samples = { solid: '건조한 고체 식염', water: '순수한 물', salt: '식염수' };
 export function fresh(name) {
@@ -31,7 +35,7 @@ export function fresh(name) {
     affinity: Object.fromEntries(CHARACTERS.map(c => [c, RULES.initial])),
     choices: {}, applied: {}, events: {}, notes: [],
     lab: { selected: null, prepared: false, dissolved: false, lamp: null, observations: [], task: null } };
-  initPeriod(state); initMid(state); enter(state, 'A-01');
+  initPeriod(state); initMid(state); initExam2(state); initChoiceContent(state); enter(state, 'A-01');
   return state;
 }
 export const rude = s => s.events.takeover || s.events.dismiss;
@@ -59,6 +63,7 @@ export function advance(s) {
   if (current?.met) { s.period.met[current.met] = true; s.events[MET_EVENTS[current.met]] = true; metOn(s, current.met); }
   if (current?.heard) s.events[current.heard] = true;
   completeMid(s, current?.midCommit, api());
+  commitLate(s, current?.lateCommit, api());
   if (s.index < s.queue.length) s.index++;
   markCurrent(s);
   s.cast = presentCast(s);
@@ -70,6 +75,8 @@ export function advance(s) {
 export function enter(s, id) {
   initPeriod(s);
   initMid(s);
+  if (lateScene(s, id, api())) return;
+  if (secondScene(s, id, api())) return;
   if (id === 'end') id = 'D3-AM';
   if (midScene(s, id, api())) return;
   if (periodScene(s, id, api())) return;
@@ -116,6 +123,11 @@ function tableOptions(s, id, table, handler) {
 }
 export function options(s) {
   if (s.index < s.queue.length || s.lab.task) return [];
+  if (lateSceneId(s.scene) || ['DAY16-HANDOFF', 'EX2-AFTER'].includes(s.scene)) return lateOptions(s, api());
+  if (s.day > 15 && ['MID-NA-REPAIR', 'MID-NA-CHECK'].includes(s.scene)) {
+    const target = id => id === 'MID-INVITE' ? 'LATE-LUNCH-END' : id === 'MID-AF' ? 'LATE-AF-SELECT' : id;
+    return midOptions(s, { ...api(), enter: (state, id) => enter(state, target(id)), queue: (state, q, after) => queue(state, q, target(after)) });
+  }
   if (midSceneId(s.scene) || s.scene === 'DAY11-HANDOFF') return midOptions(s, api());
   if (!LEGACY_SCENES[s.scene]) return periodOptions(s, api());
   const id = s.scene;
@@ -217,12 +229,12 @@ export function decodeSave(raw) {
     !validScene(s.scene) || (s.after !== null && !validScene(s.after)) ||
     !Array.isArray(s.queue) || !Number.isInteger(s.index) || s.index < 0 || s.index > s.queue.length ||
     !s.queue.every(q => typeof q.who === 'string' && typeof q.text === 'string' && (!q.snap || Object.hasOwn(SNAPS, q.snap)) && (!q.card || Object.hasOwn(CARDS, q.card)) && (!q.note || Object.hasOwn(PERIOD_NOTES, q.note) || Object.hasOwn(NOTES, q.note)) &&
-      (!q.cast || Array.isArray(q.cast) && q.cast.every(c => Object.hasOwn(PEOPLE, c))) && (!q.met || Object.hasOwn(PEOPLE, q.met)) && validCommit(q.midCommit)) ||
+      (!q.cast || Array.isArray(q.cast) && q.cast.every(c => Object.hasOwn(PEOPLE, c))) && (!q.met || Object.hasOwn(PEOPLE, q.met)) && validCommit(q.midCommit) && validLateCommit(q.lateCommit)) ||
     !CHARACTERS.every(c => Number.isFinite(s.affinity?.[c]) && s.affinity[c] >= RULES.min && s.affinity[c] <= RULES.max) ||
     !s.choices || !s.applied || !s.events || !Array.isArray(s.notes) || !s.notes.every(n => n in { ...NOTES, ...PERIOD_NOTES }) ||
     !Array.isArray(s.lab?.observations) || !s.lab.observations.every(o => samples[o.sample] && o.result === (o.sample === 'salt' ? '켜짐' : '꺼짐')) ||
     (s.lab.task && (!samples[s.lab.task.sample] || !Array.isArray(s.lab.task.response))) ||
-    !Number.isInteger(s.day) || s.day < 1 || s.day > 15 || typeof s.time !== 'string' || typeof s.location !== 'string' ||
+    !Number.isInteger(s.day) || s.day < 1 || s.day > 20 || typeof s.time !== 'string' || typeof s.location !== 'string' ||
     !Array.isArray(s.cast) || !s.cast.every(c => PEOPLE[c]) || !s.period || !['met', 're', 'labs', 'follows', 'promises', 'actions'].every(k => s.period[k] && typeof s.period[k] === 'object') ||
     !Array.isArray(s.period.history) || !s.snaps || !Object.keys(s.snaps).every(k => SNAPS[k]) ||
     !Array.isArray(s.exam?.answers) || s.exam.answers.length !== EXAM.length || !s.exam.answers.every(a => a === null || Number.isInteger(a) && a >= 0 && a <= 3) ||
@@ -234,14 +246,19 @@ export function decodeSave(raw) {
       s.exam.result.score !== EXAM.reduce((n, q, i) => n + (s.exam.answers[i] === q.correct ? EXAM_POINTS : 0), 0))) throw new Error('지원하지 않거나 손상된 저장 데이터입니다.');
   initMid(s);
   if (!validMid(s.mid)) throw new Error('지원하지 않거나 손상된 확장 기록입니다.');
+  initExam2(s);
+  initChoiceContent(s);
+  if (!validExam2(s) || !validChoiceContent(s) || !validLate(s, lunchPeople)) throw new Error('지원하지 않거나 손상된 시험·선택·후반 기록입니다.');
   repairPresentation(s);
   s.cast = presentCast(s);
   return s;
 }
 function validScene(id) {
+  if (lateSceneId(id)) return true;
+  if (secondSceneId(id)) return true;
   return typeof id === 'string' && Boolean(Object.hasOwn(LEGACY_SCENES, id) || midSceneId(id) || id === 'end' || /^(D[3-9]-(AM|NOTE|RECESS)|D2-(AF|H|HE|C|CA)|D10-AM|LUNCH-(SELECT|ACTION|PERSON|STUDY|SKIP|EMPTY)|MEET-(HE|NA|MG|CA|CL)|RE-(H|HE|C|NA|MG|CA|CL)|TALK-REPEAT|AF-SELECT|LAB-(H|HE|C|NA|MG|CA|CL|CL-read|FOLLOW)|AF-QUIET|EX-(START|PAPER|RESULT|AFTER|AF|H|HE|C|NA|MG|CA|CL)|AF-EX|DAY11-HANDOFF)$/.test(id));
 }
-const date = n => Number.isInteger(n) && n >= 1 && n <= 15;
+const date = n => Number.isInteger(n) && n >= 1 && n <= 20;
 const sharedKeys = new Set([...Object.values(SHARED_KEYS), ...Object.keys(PEOPLE).map(c => `mutual-${c}`)]);
 function validCommit(c) {
   return !c || typeof c.key === 'string' && Object.hasOwn(PEOPLE, c.code) && ['repair', 'check', 'agreement', 'personal', 'seed', 'echo', 'late', 'play', 'next', 'clRead'].includes(c.type) &&

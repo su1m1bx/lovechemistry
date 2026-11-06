@@ -128,7 +128,7 @@ test('10일차 종료 구형 슬롯에서 실제 화면으로 15일 밤·제공 
   }
   for (const pick of plan.picks) { await drain(); await expect(page.locator('.scene-id')).toHaveText(pick.scene); await page.locator('.choices button').nth(pick.index).click(); }
   await drain(); await expect(page.locator('.scene-id')).toHaveText('DAY16-HANDOFF');
-  await expect(page.locator('.dialogue')).toContainText('1~15일차'); await expect(page.locator('.affinity')).toHaveCount(0);
+  await expect(page.locator('.dialogue')).toContainText('16일차로 이어갈 수 있습니다'); await expect(page.locator('.affinity')).toHaveCount(0);
   expect([...cards]).toEqual(['molecules', 'ions', 'periodic', 'conduction', 'observation']);
   await page.getByRole('button', { name: '저장', exact: true }).click();
   const final = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);

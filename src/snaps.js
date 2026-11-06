@@ -1,6 +1,8 @@
 // ID에서 인물·장면을 추측하지 않는다. 같은 인물의 서로 다른 순간은 독립 ID다.
 const define = (id, character, scene, name, description) => [id, { character, scene, name, description, image: `${import.meta.env.BASE_URL}assets/snaps/${id}.webp` }];
 export const SNAPS = Object.fromEntries([
+  define('SNAP3-C', 'C', 'LATE-C-TURN', '탄소 · 가까운 그림', '교실, 탄소와 플레이어가 작은 무늬를 함께 가까이 본다. 큰 반응 없이도 보아 주었다는 안도.'),
+  define('SNAP3-CA', 'CA', 'LATE-CA-TURN', '칼슘 · 접어 둔 예시 판', '오늘 선택한 점심 자리 또는 교사 있는 과학실 자료 좌석, 칼슘과 플레이어가 오늘 예시 판 종이를 접고 같은 자리에 쉰다. 진 사람의 멈춤을 존중받는 안도.'),
   define('SNAP-H', 'H', 'LAB-H', '수소 · 지도를 잠깐 접는 시간', '과학실, 접힌 지도 곁에서 가고 싶은 길을 이야기하는 수소와 플레이어. 안내 역할 밖의 시간.'),
   define('SNAP-HE', 'HE', 'LAB-FOLLOW', '헬륨 · 조언의 범위', '과학실, 합의한 범위의 원고를 주고받는 두 사람. 유능함과 상대 결정권의 공존.'),
   define('SNAP-C', 'C', 'LAB-C', '탄소 · 남겨 둘 시안', '과학실, 쓰임을 구별해 시안을 남기는 두 사람. 인기와 취향의 공존.'),

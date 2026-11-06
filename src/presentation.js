@@ -22,11 +22,12 @@ const RESPONSE_PARTS = {
     2: q => [production('원문은 표시하지 않는다.'), say('염소', q[0])],
   },
 };
-export function responseParts(id, row) {
-  const text = mainRows(id)[row][1];
+export function responseParts(id, row, s) {
+  const text = mainRows(id, s)[row][1];
+  if (id === 'LAB-MG' && row === 2 && text.includes('여기. 이 접힌 선.')) return [say('마그네슘', quotes(text)[0]), stage('종이를 펴 바뀐 곳을 손가락으로 짚는다.')];
   return RESPONSE_PARTS[id]?.[row]?.(quotes(text)) || actorLines(text);
 }
-export const responseLines = (id, row) => responseParts(id, row).filter(p => p.kind !== 'production');
+export const responseLines = (id, row, s) => responseParts(id, row, s).filter(p => p.kind !== 'production');
 export const heliumReading = () => [stage('헬륨이 원고를 읽는다.'), say('헬륨', '자료가 필요한 학생은 점심시간이 끝나기 전에 도서관 자료실에서 신청서를 작성해 주세요.'), stage('원고의 ‘학생은’ 뒤를 살핀다.')];
 export const chlorineReview = () => stage('과학 자료에서 Cl₂ 기체와 Cl⁻ 이온을 수업에서 배운 물질 구분으로 확인한다.');
 export function followAction(code, promises) {

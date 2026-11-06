@@ -7,6 +7,8 @@ import { examAnswer, submitExam, finishExam } from './extension.js';
 import { NOTE_CARDS } from './learning.js';
 import { learningCard } from './cards.js';
 import { snapPresentation, revealSnap } from './vn-presentation.js';
+import { exam2Answer, exam2Questions, prepareExam2Commit, persistExam2, secondSceneId } from './second-term.js';
+import { commitHelium, reconcileHelium, HeliumConflict, persistVerified } from './helium.js';
 
 const app = document.querySelector('#app');
 let state = null;
@@ -18,6 +20,21 @@ let panelReturn = '';
 let restoreFocus = '';
 let renderedPosition = '';
 let statusTimer;
+let pendingExam2 = null;
+let pendingProgress = null;
+let activeTab = false;
+let releaseTab;
+// Web Locks serialize the entire playable session, not just two LocalStorage
+// writes. LocalStorage alone cannot implement a race-free multi-tab mutex.
+function acquirePlayLock() {
+  if (navigator.locks) navigator.locks.request('love-chemistry.active-play.v1', { ifAvailable: true }, async lock => {
+    if (!lock) { render(); return; }
+    activeTab = true; render(); await new Promise(resolve => { releaseTab = resolve; }); activeTab = false;
+  }).catch(() => { activeTab = false; render(); });
+}
+acquirePlayLock();
+window.addEventListener('pagehide', () => releaseTab?.());
+window.addEventListener('pageshow', event => { if (event.persisted) { activeTab = false; render(); acquirePlayLock(); } });
 const interactive = 'button, input, select, textarea, a, summary, [contenteditable], .learning-area, .lab, .exam, dialog';
 const el = (tag, text, cls) => {
   const node = document.createElement(tag);
@@ -26,7 +43,7 @@ const el = (tag, text, cls) => {
   return node;
 };
 function button(text, run, disabled = false, cls = '') {
-  const b = el('button', text, cls); b.type = 'button'; b.disabled = disabled;
+  const b = el('button', text, cls); b.type = 'button'; b.disabled = disabled || (!activeTab && !['불러오기', '도움말 ↗', '닫기'].includes(text));
   b.addEventListener('click', event => { event.stopPropagation(); run(); render(); });
   return b;
 }
@@ -38,12 +55,22 @@ function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) throw new Error('저장된 진행이 없습니다.');
-    const restored = decodeSave(raw); state = restored; screen = 'play'; panel = ''; message = '저장한 장면과 모든 기록을 불러왔습니다.';
+    const restored = decodeSave(raw); state = restored; pendingExam2 = null; pendingProgress = null; screen = 'play'; panel = ''; message = '저장한 장면과 모든 기록을 불러왔습니다.';
+    if (restored.late) {
+      try { const reservation = reconcileHelium(restored, localStorage, decodeSave); if (reservation) pendingProgress = { kind: 'conflict', reservation }; }
+      catch (error) { pendingProgress = { kind: 'blocked', error: error.message }; }
+    }
   } catch (error) { message = `불러오기 실패: ${error.message}`; }
 }
 function save() {
+  if (!activeTab) return;
+  if (pendingProgress) { message = '진행 저장/원장 복구를 먼저 완료해 주세요.'; return; }
+  if (pendingExam2) { message = '저장 다시 시도로 제출·복귀를 완료하거나 시작 화면으로 돌아갈 수 있습니다.'; return; }
   snapPresentation(state);
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); message = '현재 장면·선택·호감도·실험 상태를 저장했습니다.'; }
+  try {
+    if (state.late) { const reservation = reconcileHelium(state, localStorage, decodeSave); if (reservation) { pendingProgress = { kind: 'conflict', reservation }; return; } }
+    persistVerified(state, localStorage); message = '현재 장면·선택·호감도·실험 상태를 저장했습니다.';
+  }
   catch { message = '저장하지 못했습니다. 브라우저 저장 공간 또는 접근 권한을 확인해 주세요. 현재 진행은 유지됩니다.'; }
 }
 function topbar() {
@@ -69,7 +96,11 @@ function openPanel(next) {
 }
 function closePanel() { panel = ''; restoreFocus = panelReturn; }
 function menuButtons() {
-  return [button('저장', save), button('불러오기', load), button('핵심 노트', () => openPanel('notes')), button('기록', () => openPanel('records')), button('시작 화면', () => { screen = 'title'; panel = ''; })];
+  return [button('저장', save), button('불러오기', load), button('핵심 노트', () => openPanel('notes')), button('기록', () => openPanel('records')), button('시작 화면', returnHome)];
+}
+function returnHome() {
+  if (pendingProgress) { state = null; message = '저장되지 않은 메모리 진행은 버렸습니다. 기존 저장과 성공한 요청 예약은 보존했습니다.'; }
+  screen = 'title'; panel = ''; pendingExam2 = null; pendingProgress = null;
 }
 function logo() {
   const box = el('div', undefined, 'logo');
@@ -90,13 +121,13 @@ function titleScreen(main) {
   const card = el('section', undefined, 'menu-card');
   card.append(button('새 게임', () => { screen = 'intro'; message = ''; }, false, 'primary'), button('불러오기', load));
   if (state) card.append(button('현재 진행 계속하기', () => { screen = 'play'; }));
-  card.append(button('도움말 · GitHub README ↗', help), el('p', '저장은 이 브라우저의 LocalStorage에 보관됩니다. 새 게임은 기존 저장 슬롯을 덮어쓰지 않습니다.', 'muted'));
+  card.append(button('도움말 · GitHub README ↗', help), el('p', '저장은 이 브라우저의 LocalStorage에 보관됩니다. 새 게임은 기존 저장 슬롯을 덮어쓰지 않습니다. 헬륨 요청 원장은 일반 저장과 별도로 유지됩니다. 브라우저 데이터 삭제·개발자 도구 조작·저장과 원장의 과거 동시 복원·다른 기기는 통제할 수 없습니다. 한 탭에서만 진행할 수 있습니다.', 'muted'));
   intro.append(card);
   const welcome = el('section', undefined, 'title-art');
   welcome.append(el('p', '같은 자료를, 서로 다른 마음으로.', 'title-quote'));
   const names = el('div', undefined, 'title-names');
   Object.entries(PEOPLE).forEach(([code, name]) => { const tile = el('div'); tile.append(el('span', code === 'NA' ? 'Na' : code === 'HE' ? 'He' : code === 'MG' ? 'Mg' : code === 'CA' ? 'Ca' : code === 'CL' ? 'Cl' : code), el('span', name)); names.append(tile); });
-  welcome.append(names, el('p', '1~15일차 · 다음에라는 말', 'edition'));
+  welcome.append(names, el('p', '1~20일차 · 다음에라는 말', 'edition'));
   main.append(intro, welcome);
 }
 function introScreen(main) {
@@ -111,7 +142,7 @@ function nameScreen(main) {
   const input = el('input'); input.id = 'player-name'; input.name = 'name'; input.maxLength = 20; input.required = true; input.autocomplete = 'off'; input.placeholder = '1~20자';
   const submit = el('button', '등교하기', 'primary'); submit.type = 'submit';
   form.append(el('p', '전학 첫날', 'eyebrow'), el('h1', '이름을 알려 주세요.'), label, input, submit, button('돌아가기', () => { screen = 'title'; }));
-  form.addEventListener('submit', event => { event.preventDefault(); const name = input.value.trim(); if (!name || name.length > 20) { input.setCustomValidity('공백이 아닌 이름을 1~20자로 입력해 주세요.'); input.reportValidity(); return; } state = fresh(name); screen = 'play'; message = ''; render(); });
+  form.addEventListener('submit', event => { event.preventDefault(); if (!activeTab) return; const name = input.value.trim(); if (!name || name.length > 20) { input.setCustomValidity('공백이 아닌 이름을 1~20자로 입력해 주세요.'); input.reportValidity(); return; } state = fresh(name); screen = 'play'; message = ''; render(); });
   input.addEventListener('input', () => input.setCustomValidity('')); main.append(form); requestAnimationFrame(() => input.focus());
 }
 function notebook() {
@@ -143,6 +174,7 @@ function notebook() {
     box.append(list);
     state.period.history.forEach(h => box.append(el('p', `${h.day}일차 · ${h.who} · ${h.title}\n${h.text}`, 'pre')));
     if (state.exam.result) box.append(el('h3', '첫 시험 결과'), el('p', `10일차 · ${state.exam.result.score}/100점`));
+    if (state.exam2?.result) box.append(el('h3', '둘째 시험 결과'), el('p', `20일차 · ${state.exam2.result.score}/100점`));
     if (state.events.takeover || state.events.dismiss) box.append(el('h3', '나트륨과 남은 이야기'), el('p', { unresolved: '미해결', watching: '행동을 지켜보는 중', resolved: '해소됨' }[state.mid.sodium.status]));
     const memories = [
       ['recordTaste', '수소가 좋아하는 중고 음반 가게와 버스 정류장 이야기를 나눴다.'],
@@ -170,7 +202,7 @@ function modal() {
   const title = el('h2', panel === 'notes' ? '받은 핵심 노트' : panel === 'records' ? '선택과 실제 경험' : panel === 'exam-material' ? '시험 제공 자료' : '게임 메뉴'); title.id = 'panel-title';
   heading.append(title, button('닫기', closePanel)); dialog.append(heading);
   if (panel === 'menu') { const menu = el('div', undefined, 'panel-content mobile-menu'); menu.append(...menuButtons(), button('도움말 ↗', help)); dialog.append(menu); }
-  else if (panel === 'exam-material') { const content = el('div', undefined, 'panel-content'); content.append(learningCard(EXAM[state.exam.index].card)); dialog.append(content); }
+  else if (panel === 'exam-material') { const content = el('div', undefined, 'panel-content'); const second = state.scene.startsWith('EX2-'); content.append(learningCard((second ? exam2Questions(state) : EXAM)[(second ? state.exam2 : state.exam).index].card)); dialog.append(content); }
   else dialog.append(notebook());
   dialog.addEventListener('cancel', event => { event.preventDefault(); closePanel(); render(); });
   return dialog;
@@ -201,6 +233,7 @@ function experiment() {
 }
 function playScreen(main) {
   main.className = 'play-screen';
+  if (pendingProgress) { main.append(progressRecovery()); return; }
   const meta = metadata(state);
   const current = state.queue[state.index];
   const snap = snapPresentation(state);
@@ -225,7 +258,7 @@ function playScreen(main) {
     affinity.append(meters); stage.append(affinity);
   }
   main.append(stage);
-  if (state.scene === 'EX-PAPER' || state.scene === 'EX-RESULT') { main.append(examScreen()); return; }
+  if (['EX-PAPER', 'EX-RESULT', 'EX2-PAPER', 'EX2-RESULT'].includes(state.scene)) { main.append(examScreen()); return; }
   if (current?.snap) {
     main.append(snapScreen(snap));
     main.addEventListener('click', event => { if (!event.target.closest(interactive)) nextLine(); });
@@ -235,7 +268,7 @@ function playScreen(main) {
   const dialogue = el('section', undefined, 'dialogue'); dialogue.setAttribute('aria-label', '대사창');
   const who = current?.who || (state.scene === 'DAY16-HANDOFF' ? '현재 제공 범위' : state.lab.task ? '가상 실험' : '선택');
   dialogue.append(el('h2', who.startsWith('플레이어') ? `${state.name}${who.includes('독백') ? ' · 독백' : ''}` : who, 'speaker'));
-  const text = current?.text || (state.scene === 'DAY16-HANDOFF' ? '1~15일차 제공 범위가 끝났습니다. 진행을 저장하거나 시작 화면으로 돌아갈 수 있습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
+  const text = current?.text || (state.scene === 'DAY20-HANDOFF' ? '20일차 일과를 마쳤습니다. 다음 개발 구간은 아직 열리지 않았습니다.' : state.scene === 'DAY16-HANDOFF' ? '기록을 보존하고 16일차로 이어갈 수 있습니다.' : secondSceneId(state.scene) && state.scene !== 'EX2-AFTER' ? '공통 학습 확인을 마쳤습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
   // Retain a card while its following explanation is spoken, without changing queue order.
   const card = current?.card || (current?.who === '화학 교사' ? state.queue[state.index - 1]?.card : null);
   if (card) {
@@ -256,17 +289,17 @@ function playScreen(main) {
     if (available.length) {
       const choices = el('section', undefined, 'choices'); choices.setAttribute('aria-label', '행동 선택');
       choices.append(el('p', '어떤 마음을 전할까?', 'eyebrow'));
-      available.forEach(({ label, run, disabled }, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${label}`, () => { run(); message = ''; }, disabled)));
+      available.forEach((choice, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${choice.label}`, () => runChoice(choice, i), choice.disabled)));
       center.append(choices);
     }
-    if (state.scene === 'DAY16-HANDOFF') dialogue.append(button('진행 저장', save), button('시작 화면으로', () => { screen = 'title'; }));
+    if (['DAY16-HANDOFF', 'DAY20-HANDOFF'].includes(state.scene)) dialogue.append(button('진행 저장', save), button('시작 화면으로', returnHome));
   }
   if (state.scene.startsWith('C') && state.scene !== 'C-07' && !center.children.length) center.append(experiment());
   if (center.querySelector('.learning-area, .lab')) main.classList.add('has-content');
   main.append(center, dialogue);
 }
 function next() {
-  if (screen !== 'play' || panel || !state.queue[state.index] || ['EX-PAPER', 'EX-RESULT'].includes(state.scene)) return;
+  if (!activeTab || pendingProgress || screen !== 'play' || panel || !state.queue[state.index] || ['EX-PAPER', 'EX-RESULT', 'EX2-PAPER', 'EX2-RESULT'].includes(state.scene)) return;
   if (!revealSnap(state)) advance(state);
   message = '';
 }
@@ -278,7 +311,7 @@ function snapBackdrop(id) {
     const image = el('img'); image.src = snap.image; image.alt = snap.description;
     image.addEventListener('error', () => { failedSnapImages.add(id); if (screen === 'play' && snapPresentation(state)?.id === id) render(); });
     box.append(image);
-  } else box.append(el('p', '이미지 준비 중', 'snap-fallback'));
+  } else box.append(el('p', `이미지 준비 중\n${snap.description}`, 'snap-fallback'));
   return box;
 }
 function snapScreen(presentation) {
@@ -289,23 +322,26 @@ function snapScreen(presentation) {
   return box;
 }
 function examScreen() {
-  const box = el('section', undefined, 'exam'); box.setAttribute('aria-label', '첫 시험');
-  const exam = state.exam;
-  if (state.scene === 'EX-RESULT') {
-    box.append(el('h2', `첫 시험 결과 · ${exam.result.score}/100점`));
+  const second = state.scene.startsWith('EX2-');
+  const title = second ? '둘째 시험' : '첫 시험';
+  const questions = second ? exam2Questions(state) : EXAM;
+  const box = el('section', undefined, 'exam'); box.setAttribute('aria-label', title);
+  const exam = second ? state.exam2 : state.exam;
+  if (state.scene === 'EX-RESULT' || state.scene === 'EX2-RESULT') {
+    box.append(el('h2', `${title} 결과 · ${exam.result.score}/100점`));
     const explanations = el('div', undefined, 'exam-explanations'); explanations.tabIndex = 0; explanations.setAttribute('aria-label', '문항별 해설');
-    EXAM.forEach((q, i) => {
+    questions.forEach((q, i) => {
       const answer = exam.result.details[i].answer;
       explanations.append(el('h3', `${i + 1}. ${q.prompt}`), el('p', `제출 답: ${answer === null ? '미응답' : q.options[answer]} · ${exam.result.details[i].points}점`), el('p', `정답: ${q.options[q.correct]}\n해설: ${q.explanation}`, 'pre'));
       if (q.card) explanations.append(learningCard(q.card));
     });
     box.append(explanations);
-    box.append(button('결과 확인 · 시험 후 일과로', () => { finishExam(state, enterScene); save(); }, false, 'primary'));
+    box.append(button('결과 확인 · 시험 후 일과로', () => { if (second) commitSecondExam('return'); else { finishExam(state, enterScene); save(); } }, Boolean(pendingExam2), 'primary'));
   } else {
-    const q = EXAM[exam.index];
+    const q = questions[exam.index];
     const heading = el('div', undefined, 'exam-heading');
     const rules = el('details', undefined, 'exam-rules'); rules.append(el('summary', '시험 안내'), el('p', '각 문항 10점, 총 100점입니다. 제출 전 답을 바꿀 수 있고, 미응답은 0점입니다. 시험 성적만으로 호감도가 바뀌지 않습니다. 답안 제출과 결과 확인 때 현재 진행을 저장합니다.'));
-    heading.append(el('h2', `첫 시험 · ${exam.index + 1}/${EXAM.length}`), rules); box.append(heading);
+    heading.append(el('h2', `${title} · ${exam.index + 1}/${questions.length}`), rules); box.append(heading);
     const question = el('div', undefined, 'exam-question');
     question.append(el('h3', q.prompt));
     if (q.card) {
@@ -314,18 +350,77 @@ function examScreen() {
     }
     const answers = el('fieldset'); answers.append(el('legend', '답안 선택'));
     const count = el('p'); count.setAttribute('aria-live', 'polite');
-    const updateCount = () => { count.textContent = `${exam.answers.filter(a => a !== null).length}/${EXAM.length}문항 응답`; };
+    const updateCount = () => { count.textContent = `${exam.answers.filter(a => a !== null).length}/${questions.length}문항 응답`; };
     updateCount();
     q.options.forEach((text, i) => {
       const label = el('label', undefined, 'exam-option');
       const radio = el('input'); radio.type = 'radio'; radio.name = q.id; radio.value = i; radio.checked = exam.answers[exam.index] === i;
-      radio.addEventListener('change', () => { examAnswer(state, exam.index, i); updateCount(); });
+      radio.disabled = Boolean(pendingExam2) || !activeTab;
+      radio.addEventListener('change', () => { (second ? exam2Answer : examAnswer)(state, exam.index, i); updateCount(); });
       label.append(radio, el('span', text)); answers.append(label);
     }); question.append(answers); box.append(question);
     const controls = el('div', undefined, 'exam-navigation');
-    controls.append(count, button('이전 문항', () => { exam.index--; }, exam.index === 0), button('다음 문항', () => { exam.index++; }, exam.index === EXAM.length - 1), button('답안 제출', () => { submitExam(state, enterScene); save(); }, false, 'primary'));
+    controls.append(count, button('이전 문항', () => { exam.index--; }, exam.index === 0 || Boolean(pendingExam2)), button('다음 문항', () => { exam.index++; }, exam.index === questions.length - 1 || Boolean(pendingExam2)), button('답안 제출', () => { if (second) commitSecondExam('submit'); else { submitExam(state, enterScene); save(); } }, Boolean(pendingExam2), 'primary'));
     box.append(controls);
   }
+  if (pendingExam2) {
+    const failure = el('div', undefined, 'exam-save-failure'); failure.setAttribute('role', 'alert');
+    failure.append(el('p', '진행을 저장하지 못했습니다. 아직 결과가 적용되지 않았습니다. 저장을 다시 시도하거나 시작 화면으로 돌아갈 수 있습니다.'), button('저장 다시 시도', retrySecondExam), button('시작 화면으로', () => { pendingExam2 = null; screen = 'title'; panel = ''; }));
+    box.append(failure);
+  }
+  return box;
+}
+function commitSecondExam(action) {
+  if (pendingExam2) return;
+  pendingExam2 = prepareExam2Commit(state, action, enterScene);
+  if (pendingExam2) retrySecondExam();
+}
+function retrySecondExam() {
+  if (!pendingExam2) return;
+  try {
+    state = persistExam2(pendingExam2, localStorage, SAVE_KEY); pendingExam2 = null;
+    message = '둘째 시험 진행을 저장했습니다.';
+  } catch { message = ''; }
+}
+function runChoice(choice, index) {
+  if (!activeTab || pendingProgress) return;
+  message = '';
+  if (choice.heliumRequest) {
+    pendingProgress = { kind: 'helium', source: structuredClone(state) }; retryProgress();
+  } else if (state.scene === 'DAY16-HANDOFF' || state.scene === 'EX2-AFTER' && !state.late || state.scene === 'LATE-CLOSE' && state.day === 20) {
+    // Persist the new run identity on expansion, and the resumable day-20
+    // boundary, before publishing either transition. Failed retries keep ID.
+    const candidate = structuredClone(state); options(candidate)[index].run();
+    pendingProgress = { kind: 'progress', candidate }; retryProgress();
+  } else choice.run();
+}
+function retryProgress() {
+  if (!activeTab || !pendingProgress) return;
+  try {
+    if (pendingProgress.kind === 'helium') state = commitHelium(pendingProgress.source, localStorage, decodeSave);
+    else if (pendingProgress.kind === 'progress') state = persistVerified(pendingProgress.candidate, localStorage);
+    else return;
+    pendingProgress = null; message = '진행을 저장했습니다.';
+  } catch (error) {
+    if (error instanceof HeliumConflict) pendingProgress = { kind: 'conflict', reservation: error.reservation };
+    else pendingProgress.error = error.message;
+  }
+}
+function progressRecovery() {
+  const box = el('section', undefined, 'exam-save-failure'); box.setAttribute('role', 'alert');
+  const kind = pendingProgress.kind;
+  if (kind === 'conflict') {
+    box.append(el('p', '이전 저장과 이미 예약된 헬륨 요청이 충돌합니다. 선택한 저장은 덮어쓰지 않았습니다. 예약 당시 위치와 같은 요청을 복구하거나 시작 화면으로 돌아가세요.'),
+      button('예약 당시 위치에서 복구', () => {
+        try {
+          const source = decodeSave(pendingProgress.reservation.source);
+          state = source; pendingProgress = { kind: 'helium', source }; retryProgress();
+        } catch (error) { pendingProgress = { kind: 'blocked', error: error.message }; }
+      }));
+  } else if (kind === 'blocked') box.append(el('p', pendingProgress.error));
+  else box.append(el('p', '진행을 저장하지 못했습니다. 아직 결과가 적용되지 않았습니다. 저장을 다시 시도하거나 시작 화면으로 돌아갈 수 있습니다.'), button('저장 다시 시도', retryProgress));
+  if (pendingProgress.error && kind !== 'blocked') box.append(el('p', pendingProgress.error));
+  box.append(button('이전 저장 불러오기', load), button('시작 화면으로', returnHome));
   return box;
 }
 function render() {
@@ -335,7 +430,9 @@ function render() {
   renderedPosition = position;
   app.replaceChildren(topbar()); const main = el('main');
   if (screen === 'splash') splashScreen(main); else if (screen === 'title') titleScreen(main); else if (screen === 'intro') introScreen(main); else if (screen === 'name') nameScreen(main); else playScreen(main);
-  app.append(main); const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status);
+  app.append(main);
+  if (!activeTab) app.append(el('p', navigator.locks ? '다른 탭이 진행 중입니다. 이 탭은 읽기 전용입니다. 진행 중인 탭을 닫은 뒤 새로고침해 주세요.' : '단일 탭 잠금을 지원하지 않는 브라우저입니다. 진행과 헬륨 요청은 차단했습니다. 지원 브라우저에서 열어 주세요.', 'status'));
+  const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status);
   clearTimeout(statusTimer);
   if (message) statusTimer = setTimeout(() => { status.textContent = ''; message = ''; }, 4000);
   if (panel) { const dialog = modal(); dialog.append(status); app.append(dialog); dialog.showModal(); }
@@ -356,7 +453,11 @@ document.addEventListener('keydown', event => {
     else if (screen === 'intro') { screen = 'name'; render(); }
     else if (screen === 'play' && !panel) nextLine();
   }
-  if (event.key === 'Escape' && screen === 'play' && !panel) { openPanel('menu'); render(); }
+  if (event.key === 'Escape' && screen === 'play' && !panel) {
+    // Consume only the opening key: its native default would cancel the newly
+    // opened dialog. Later Escape inputs still use the dialog's cancel handler.
+    event.preventDefault(); openPanel('menu'); render();
+  }
   if (['ArrowDown', 'ArrowUp'].includes(event.key) && event.target.closest('.choices')) {
     event.preventDefault(); const choices = [...app.querySelectorAll('.choices button:not(:disabled)')];
     choices[(choices.indexOf(document.activeElement) + (event.key === 'ArrowDown' ? 1 : choices.length - 1)) % choices.length]?.focus();
