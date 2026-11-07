@@ -68,7 +68,7 @@ for (const mode of ['new', 'old15']) test(`실제 화면 ${mode}: 20일까지 H-
   expect(persisted.affinity).toEqual(plan.affinity); expect(persisted.late.complete).toMatchObject({ 'H:T': 16, 'H:X': 18, 'MG:T': 17, 'MG:X': 19, 'C:X': 20 });
   expect([...cards]).toEqual(expect.arrayContaining(['providedRecords', 'comparisonConditions', 'coldWaterComparison', 'graphiteEvidence']));
   expect([restoredBefore, restoredDuring, restoredAfter]).toEqual([true, true, true]);
-  await page.reload(); await menuAction(page, '불러오기'); await drain(); await expect(page.locator('.choices button')).toHaveCount(0);
+  await page.reload(); await menuAction(page, '불러오기'); await drain(); await expect(page.locator('.choices button')).toHaveText('01  21일차로 이어가기');
 });
 
 for (const code of ['C', 'CA']) test(`SNAP3-${code}: 그림/알림/후속 복원·없는 이미지 대체·기획득 표시만 생략`, async ({ page }) => {

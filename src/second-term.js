@@ -62,6 +62,7 @@ export function validExam2(s) {
   if (secondSceneId(s.scene) && (s.day !== (SECOND_NOTES.includes(s.scene) ? Number(s.scene.match(/\d+/)[0]) : 20) ||
     !SECOND_NOTES.includes(s.scene) && !SECOND_NOTES.every(n => s.notes.includes(n)))) return false;
   if (s.day > 15 && !secondSceneId(s.scene) && !(s.late?.normal && (lateSceneId(s.scene) || ['MID-NA-REPAIR', 'MID-NA-CHECK'].includes(s.scene)))) return false;
+  if (s.day > 20 && !e.returned) return false;
   if (s.late?.normal && s.day >= 16 && !Array.from({ length: Math.min(s.day - 16, 4) }, (_, i) => `D${16 + i}-NOTE`).every(n => s.notes.includes(n))) return false;
   if (s.late?.normal && s.day === 20 && (s.scene.startsWith('LATE-') || s.scene === 'DAY20-HANDOFF' || s.scene.startsWith('MID-NA-')) && !e.returned) return false;
   if (SECOND_NOTES.some(note => s.notes.includes(note) && s.day < Number(note.match(/\d+/)[0]))) return false;

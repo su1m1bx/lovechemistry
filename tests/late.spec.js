@@ -6,6 +6,7 @@ test('후반 실제 대사·선택을 정본 원문에 대조: 새 대사/사건
     const source = (await import('/docs/story.md?raw')).default; const { LATE_EVENTS } = await import('/src/late-state.js'); const { lateContent } = await import('/src/late-content.js');
     const s = { day: 20, choices: {}, mid: { shared: {} }, late: { complete: {} } }; const missing = [];
     for (const [c, events] of Object.entries(LATE_EVENTS)) for (const event of Object.keys(events)) {
+      if (events[event][0] > 20) continue; // This regression covers the original 16–20 content module.
       const content = lateContent(s, c, event);
       for (const line of [...content.intro, ...content.choices.flatMap(c => c.lines)]) if (line.kind === 'dialogue' && !source.includes(line.text)) missing.push({ c, event, text: line.text });
       for (const choice of content.choices) if (!source.includes(choice.label.split(' — ')[0])) missing.push({ c, event, label: choice.label });
@@ -25,7 +26,7 @@ for (const code of ['H', 'MG', 'C', 'NA', 'CA', 'CL', 'HE']) test(`정상 새 �
   }, code);
   expect(r.s).toMatchObject({ day: 20, scene: 'DAY20-HANDOFF', exam2: { submitted: true, returned: true, result: { score: 100 } } });
   expect(r.s.exam).toEqual(r.before.exam); expect(r.s.notes).toEqual(expect.arrayContaining(['D16-NOTE', 'D17-NOTE', 'D18-NOTE', 'D19-NOTE']));
-  expect(r.options).toEqual([]); expect(r.visited.some(v => v.startsWith('21:'))).toBe(false);
+  expect(r.options.map(o => o.label)).toEqual(['21일차로 이어가기']); expect(r.visited.some(v => v.startsWith('21:'))).toBe(false);
   for (let day = 16; day <= 20; day++) expect(r.s.period.actions[day]).toHaveProperty('afterSchool');
   if (code === 'H') expect(r.s.late.complete).toMatchObject({ 'H:T': 16, 'H:X': 18 });
   if (code === 'MG') expect(r.s.late.complete).toMatchObject({ 'MG:T': 17, 'MG:X': 19 });

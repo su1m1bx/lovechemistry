@@ -127,7 +127,7 @@ function titleScreen(main) {
   welcome.append(el('p', '같은 자료를, 서로 다른 마음으로.', 'title-quote'));
   const names = el('div', undefined, 'title-names');
   Object.entries(PEOPLE).forEach(([code, name]) => { const tile = el('div'); tile.append(el('span', code === 'NA' ? 'Na' : code === 'HE' ? 'He' : code === 'MG' ? 'Mg' : code === 'CA' ? 'Ca' : code === 'CL' ? 'Cl' : code), el('span', name)); names.append(tile); });
-  welcome.append(names, el('p', '1~20일차 · 다음에라는 말', 'edition'));
+  welcome.append(names, el('p', '1~30일차 · 방학식까지', 'edition'));
   main.append(intro, welcome);
 }
 function introScreen(main) {
@@ -268,7 +268,7 @@ function playScreen(main) {
   const dialogue = el('section', undefined, 'dialogue'); dialogue.setAttribute('aria-label', '대사창');
   const who = current?.who || (state.scene === 'DAY16-HANDOFF' ? '현재 제공 범위' : state.lab.task ? '가상 실험' : '선택');
   dialogue.append(el('h2', who.startsWith('플레이어') ? `${state.name}${who.includes('독백') ? ' · 독백' : ''}` : who, 'speaker'));
-  const text = current?.text || (state.scene === 'DAY20-HANDOFF' ? '20일차 일과를 마쳤습니다. 다음 개발 구간은 아직 열리지 않았습니다.' : state.scene === 'DAY16-HANDOFF' ? '기록을 보존하고 16일차로 이어갈 수 있습니다.' : secondSceneId(state.scene) && state.scene !== 'EX2-AFTER' ? '공통 학습 확인을 마쳤습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
+  const text = current?.text || (state.scene === 'DAY20-HANDOFF' ? '기록을 보존하고 21일차로 이어갈 수 있습니다.' : state.scene === 'DAY16-HANDOFF' ? '기록을 보존하고 16일차로 이어갈 수 있습니다.' : secondSceneId(state.scene) && state.scene !== 'EX2-AFTER' ? '공통 학습 확인을 마쳤습니다.' : state.scene === 'DAY11-HANDOFF' ? '기록을 보존하고 11일차로 이어갈 수 있습니다.' : state.lab.task ? '선택한 조건의 시료를 준비하고 측정 버튼을 눌러 주세요.' : '어떻게 할까?');
   // Retain a card while its following explanation is spoken, without changing queue order.
   const card = current?.card || (current?.who === '화학 교사' ? state.queue[state.index - 1]?.card : null);
   if (card) {
@@ -300,6 +300,11 @@ function playScreen(main) {
 }
 function next() {
   if (!activeTab || pendingProgress || screen !== 'play' || panel || !state.queue[state.index] || ['EX-PAPER', 'EX-RESULT', 'EX2-PAPER', 'EX2-RESULT'].includes(state.scene)) return;
+  if (state.scene.startsWith('END-')) {
+    const candidate = structuredClone(state);
+    if (!revealSnap(candidate)) advance(candidate);
+    pendingProgress = { kind: candidate.ending.completed && !state.ending.completed ? 'ending' : 'progress', candidate }; retryProgress(); return;
+  }
   if (!revealSnap(state)) advance(state);
   message = '';
 }
@@ -317,7 +322,7 @@ function snapBackdrop(id) {
 function snapScreen(presentation) {
   const snap = SNAPS[presentation.id];
   const box = el('section', undefined, presentation.phase === 'image' ? 'snap image-phase' : 'dialogue snap'); box.setAttribute('aria-label', '이벤트 스냅');
-  if (presentation.phase === 'notice') box.append(el('h2', snap.name, 'speaker'), el('p', `${PEOPLE[snap.character]}와 함께한 순간을 열람했습니다.`, 'dialogue-text'));
+  if (presentation.phase === 'notice') box.append(el('h2', snap.name, 'speaker'), el('p', snap.character ? `${PEOPLE[snap.character]}와 함께한 순간을 열람했습니다.` : '혼자 고른 순간을 열람했습니다.', 'dialogue-text'));
   box.append(button(presentation.phase === 'image' ? '스냅 정보 보기 ▸' : '스냅 닫고 계속', next, false, 'next'));
   return box;
 }
@@ -385,9 +390,10 @@ function retrySecondExam() {
 function runChoice(choice, index) {
   if (!activeTab || pendingProgress) return;
   message = '';
+  if (choice.home) { returnHome(); return; }
   if (choice.heliumRequest) {
     pendingProgress = { kind: 'helium', source: structuredClone(state) }; retryProgress();
-  } else if (state.scene === 'DAY16-HANDOFF' || state.scene === 'EX2-AFTER' && !state.late || state.scene === 'LATE-CLOSE' && state.day === 20) {
+  } else if (state.scene.startsWith('END-') || ['DAY16-HANDOFF', 'DAY20-HANDOFF'].includes(state.scene) || state.scene === 'EX2-AFTER' && !state.late || state.scene === 'LATE-CLOSE' && [20, 30].includes(state.day)) {
     // Persist the new run identity on expansion, and the resumable day-20
     // boundary, before publishing either transition. Failed retries keep ID.
     const candidate = structuredClone(state); options(candidate)[index].run();
@@ -398,7 +404,7 @@ function retryProgress() {
   if (!activeTab || !pendingProgress) return;
   try {
     if (pendingProgress.kind === 'helium') state = commitHelium(pendingProgress.source, localStorage, decodeSave);
-    else if (pendingProgress.kind === 'progress') state = persistVerified(pendingProgress.candidate, localStorage);
+    else if (['progress', 'ending'].includes(pendingProgress.kind)) state = persistVerified(pendingProgress.candidate, localStorage);
     else return;
     pendingProgress = null; message = '진행을 저장했습니다.';
   } catch (error) {
@@ -418,6 +424,7 @@ function progressRecovery() {
         } catch (error) { pendingProgress = { kind: 'blocked', error: error.message }; }
       }));
   } else if (kind === 'blocked') box.append(el('p', pendingProgress.error));
+  else if (kind === 'ending') box.append(el('p', '결말을 저장하지 못했습니다. 다시 저장할 수 있습니다.'), button('다시 저장', retryProgress), button('이 화면에 머물기', () => {}));
   else box.append(el('p', '진행을 저장하지 못했습니다. 아직 결과가 적용되지 않았습니다. 저장을 다시 시도하거나 시작 화면으로 돌아갈 수 있습니다.'), button('저장 다시 시도', retryProgress));
   if (pendingProgress.error && kind !== 'blocked') box.append(el('p', pendingProgress.error));
   box.append(button('이전 저장 불러오기', load), button('시작 화면으로', returnHome));
