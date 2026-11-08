@@ -18,12 +18,20 @@ async function loaded(image) { await expect(image).toBeVisible(); await expect.p
 async function portraitFits(page) {
   const result = await page.locator('.standing').evaluateAll(images => images.map(img => {
     const r = img.getBoundingClientRect(); const p = img.closest('.portrait').getBoundingClientRect(); const d = document.querySelector('.dialogue').getBoundingClientRect(); const css = getComputedStyle(img);
-    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, pBottom: p.bottom, dTop: d.top, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
+    const paintedHeight = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight) * img.naturalHeight;
+    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, paintedHeight, pBottom: p.bottom, dTop: d.top, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
   }));
   for (const r of result) { expect(r.fit).toBe('contain'); expect(r.blend).toBe('normal'); expect(r.h).toBeGreaterThan(30); expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.right).toBeLessThanOrEqual(r.vw); expect(r.bottom).toBeLessThanOrEqual(r.dTop - 8); expect(r.bottom).toBeLessThanOrEqual(r.pBottom + 1); }
+  // Check the painted raster, not just its possibly letterboxed element box.
+  // These floors prevent the previous undersized standings from regressing.
+  for (const r of result) {
+    const minimum = r.vw <= 600 ? r.vh < 700 ? 195 : result.length > 1 ? 290 : 370 : r.vh < 550 ? 150 : r.vh < 800 ? 310 : 430;
+    expect(r.paintedHeight).toBeGreaterThanOrEqual(minimum);
+  }
+  for (let i = 1; i < result.length; i++) expect(result[i - 1].right).toBeLessThanOrEqual(result[i].x + 1);
 }
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
   for (const [code, name] of Object.entries(CODES)) test(`${viewport.width}×${viewport.height} ${name}: 실제 대화 스탠딩·현재 화자·원본 전체 비율`, async ({ page }, info) => {
     await page.setViewportSize(viewport); await page.goto('/'); const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s);
     await expect(page.locator('.cast-slot')).toHaveCount(1); await expect(page.locator('.speaking')).toHaveAttribute('data-character', name); await expect(page.locator('.speaking-label')).toHaveText('말하는 중');

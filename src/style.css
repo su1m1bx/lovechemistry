@@ -65,11 +65,11 @@ input { display: block; width: 100%; padding: 12px; margin: 8px 0 20px; border: 
 .stage[data-location*="운동장"] { background: linear-gradient(150deg, #f6efe2, #e8eee5, #f3e4e8); }
 .stage[data-location*="도서관"] { background: linear-gradient(150deg, #f1e9f4, #f8eedd, #eee4eb); }
 .location-label { position: absolute; top: 20px; left: 26px; color: #826c7d; font-size: 13px; letter-spacing: .08em; }
-.affinity { position: absolute; inset: 60px 5% calc(27% + 50px); }
-.meters { display: flex; justify-content: center; gap: clamp(12px, 6vw, 100px); height: 100%; }
-.cast-slot { width: min(30%, 270px); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-.play-screen:not(.has-content) .affinity:not(.snap-cast) .cast-slot:only-child { width: min(64%, 340px); }
-.cast-badge { position: relative; display: grid; text-align: center; gap: 2px; padding: 10px 20px; width: 100%; border: 1px solid #d4c2d2; border-radius: 16px; background: #fffcf8e8; box-shadow: var(--shadow); }
+.affinity { position: absolute; inset: 32px 4% calc(27% + 40px); }
+.meters { display: flex; justify-content: center; gap: clamp(8px, 4vw, 60px); height: 100%; }
+.cast-slot { width: min(42%, 440px); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.play-screen:not(.has-content) .affinity:not(.snap-cast) .cast-slot:only-child { width: min(90%, 540px); }
+.cast-badge { position: relative; display: grid; text-align: center; gap: 2px; padding: 6px 16px; width: 100%; max-width: 270px; border: 1px solid #d4c2d2; border-radius: 16px; background: #fffcf8e8; box-shadow: var(--shadow); }
 .cast-badge strong { font-size: 18px; } .cast-badge span { font-size: 13px; }
 meter { width: 100%; height: 8px; accent-color: var(--accent); }
 meter::-webkit-meter-bar { background: #ece0e8; border: 0; } meter::-webkit-meter-optimum-value { background: #c77299; }
@@ -191,10 +191,13 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .dialogue-text, .reading-hint { font-size: 17px; line-height: 1.65; }
   .speaker { left: 10px; font-size: 14px; padding: 5px 14px; }
   .location-label { top: 12px; left: 16px; }
-  .affinity { inset: 48px 5% calc(31% + 50px); }
-  .meters { gap: 12px; }
-  .cast-slot { width: min(46%, 230px); gap: 12px; }
-  .cast-badge { padding: 8px; border-radius: 12px; }
+  .affinity { inset: 36px 0 calc(31% + 40px); }
+  .meters { gap: 0; }
+  .cast-slot { width: min(48%, 270px); gap: 4px; }
+  .cast-badge { padding: 6px; border-radius: 12px; }
+  /* Use the full stage width for two sprites without overlapping or cropping. */
+  .play-screen:not(.has-content) .affinity:not(.snap-cast) .cast-slot:not(:only-child):has(.has-art) { width: 50%; flex-shrink: 0; }
+  .play-screen:not(.has-content) .affinity:not(.snap-cast) .cast-slot:not(:only-child) .cast-badge { width: 82%; }
   .cast-badge strong { font-size: 16px; } .cast-badge span { font-size: 12px; }
   .character-name { font-size: 20px; }
   .has-content .affinity { inset: 8px 12px auto; }
@@ -242,7 +245,7 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
 }
 @media (max-height: 550px) and (min-width: 601px) {
   /* Short landscape: put the badge beside the uncropped art, not above it. */
-  .affinity { inset: 36px 3% 164px; }
+  .affinity { inset: 16px 3% 154px; }
   .cast-slot { flex-direction: row; width: min(45%, 360px); gap: 8px; }
   .cast-badge { width: 140px; flex-shrink: 0; padding: 6px 8px; }
   .portrait { height: 100%; }
