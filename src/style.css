@@ -65,14 +65,18 @@ input { display: block; width: 100%; padding: 12px; margin: 8px 0 20px; border: 
 .stage[data-location*="운동장"] { background: linear-gradient(150deg, #f6efe2, #e8eee5, #f3e4e8); }
 .stage[data-location*="도서관"] { background: linear-gradient(150deg, #f1e9f4, #f8eedd, #eee4eb); }
 .location-label { position: absolute; top: 20px; left: 26px; color: #826c7d; font-size: 13px; letter-spacing: .08em; }
-.affinity { position: absolute; inset: 60px 5% 16%; }
+.affinity { position: absolute; inset: 60px 5% calc(27% + 50px); }
 .meters { display: flex; justify-content: center; gap: clamp(12px, 6vw, 100px); height: 100%; }
 .cast-slot { width: min(30%, 270px); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-.cast-badge { display: grid; text-align: center; gap: 2px; padding: 10px 20px; width: 100%; border: 1px solid #d4c2d2; border-radius: 16px; background: #fffcf8e8; box-shadow: var(--shadow); }
+.play-screen:not(.has-content) .affinity:not(.snap-cast) .cast-slot:only-child { width: min(64%, 340px); }
+.cast-badge { position: relative; display: grid; text-align: center; gap: 2px; padding: 10px 20px; width: 100%; border: 1px solid #d4c2d2; border-radius: 16px; background: #fffcf8e8; box-shadow: var(--shadow); }
 .cast-badge strong { font-size: 18px; } .cast-badge span { font-size: 13px; }
 meter { width: 100%; height: 8px; accent-color: var(--accent); }
 meter::-webkit-meter-bar { background: #ece0e8; border: 0; } meter::-webkit-meter-optimum-value { background: #c77299; }
 .portrait { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #cdbbcc; border-radius: 70px 70px 22px 22px; background: #fffaf550; color: #8b7788; }
+.portrait.has-art, .speaking .portrait.has-art { border: 0; border-radius: 0; background: none; }
+.standing { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; object-position: center bottom; }
+.cast-badge .speaking-label { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); white-space: nowrap; border-radius: 8px; padding: 0 7px; background: #a34270; color: white; font-size: 10px; }
 .character-name { font-size: 25px; font-weight: 600; } .image-note { font-size: 12px; margin-top: 8px; }
 .speaking .cast-badge { border-color: #b45482; box-shadow: 0 0 0 3px #fff7fc; }
 .speaking .cast-badge strong { color: var(--accent); }
@@ -123,8 +127,9 @@ th { background: #f0e8f4; }
 dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-weight: 700; } dd { margin: 0; }
 .mobile-menu { display: grid; gap: 12px; }
 /* Snap art stays behind the exact follow-up queue, including after reload. */
-.snap-backdrop { position: absolute; inset: 0; display: grid; place-items: center; background: #eee5ef; }
-.snap-backdrop img { width: 100%; height: 100%; object-fit: contain; }
+.snap-backdrop { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); place-items: center; background: #eee5ef; }
+.snap-backdrop img { min-width: 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; }
+.play-screen[data-snap-phase="notice"] .snap-backdrop, .play-screen[data-snap-phase="follow"] .snap-backdrop { top: 110px; bottom: calc(27% + 50px); }
 .snap-fallback { color: #8b7788; border: 1px dashed #cdbbcc; border-radius: 18px; padding: 30px; }
 .snap-cast { inset: 16px 5% auto; }
 .snap-cast .meters { justify-content: flex-end; }
@@ -186,7 +191,7 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .dialogue-text, .reading-hint { font-size: 17px; line-height: 1.65; }
   .speaker { left: 10px; font-size: 14px; padding: 5px 14px; }
   .location-label { top: 12px; left: 16px; }
-  .affinity { inset: 48px 5% 20%; }
+  .affinity { inset: 48px 5% calc(31% + 50px); }
   .meters { gap: 12px; }
   .cast-slot { width: min(46%, 230px); gap: 12px; }
   .cast-badge { padding: 8px; border-radius: 12px; }
@@ -223,6 +228,7 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .exam-navigation p { width: 100%; }
   .exam-navigation button { padding: 8px 10px; flex: 1; font-size: 14px; text-align: center; }
   .snap-cast { inset: 8px 12px auto; }
+  .play-screen[data-snap-phase="notice"] .snap-backdrop, .play-screen[data-snap-phase="follow"] .snap-backdrop { top: 96px; bottom: calc(31% + 50px); }
 }
 @media (max-height: 550px) {
   .play-screen { grid-template-rows: minmax(0, 1fr) 130px; padding-top: 8px; padding-bottom: 8px; gap: 26px; }
@@ -235,6 +241,13 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .name-screen, .transfer-screen { align-content: start; }
 }
 @media (max-height: 550px) and (min-width: 601px) {
+  /* Short landscape: put the badge beside the uncropped art, not above it. */
+  .affinity { inset: 36px 3% 164px; }
+  .cast-slot { flex-direction: row; width: min(45%, 360px); gap: 8px; }
+  .cast-badge { width: 140px; flex-shrink: 0; padding: 6px 8px; }
+  .portrait { height: 100%; }
+  .snap-cast { inset: 8px 12px auto; }
+  .play-screen[data-snap-phase="notice"] .snap-backdrop, .play-screen[data-snap-phase="follow"] .snap-backdrop { top: 96px; bottom: 164px; }
   /* Reserve a side lane for cast badges only when there is horizontal room. */
   .has-content .scene-content { padding-top: 0; padding-right: 180px; }
   .has-content .cast-slot { width: 150px; }

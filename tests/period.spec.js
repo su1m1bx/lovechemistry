@@ -5,6 +5,9 @@ const SAVE_KEY = 'love-chemistry.prototype.v1';
 const people = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', MG: '마그네슘', CA: '칼슘', CL: '염소' };
 const placeFor = { H: 3, HE: 0, C: 2, NA: 1, MG: 1, CA: 4, CL: 3 };
 const available = { H: [2, 6, 9], HE: [2, 4, 7], C: [2, 5, 9], NA: [2, 5, 8], MG: [3, 6], CA: [2, 4, 8], CL: [3, 7] };
+// Keep the original missing-art regression explicit now that real art ships.
+// The separate loaded-image test below overrides its exact URL as before.
+test.beforeEach(async ({ page }) => { await page.route('**/assets/snaps/*.webp', route => route.abort()); });
 const scene = page => page.locator('.scene-id').textContent();
 async function save(page) {
   await menuAction(page, '저장');

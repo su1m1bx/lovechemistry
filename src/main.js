@@ -9,6 +9,8 @@ import { learningCard } from './cards.js';
 import { snapPresentation, revealSnap } from './vn-presentation.js';
 import { exam2Answer, exam2Questions, prepareExam2Commit, persistExam2, secondSceneId } from './second-term.js';
 import { commitHelium, reconcileHelium, HeliumConflict, persistVerified } from './helium.js';
+import { CHARACTER_ART } from './character-art.js';
+import { snapImage } from './snaps.js';
 
 const app = document.querySelector('#app');
 let state = null;
@@ -16,6 +18,7 @@ let screen = 'splash';
 let message = '';
 let panel = '';
 const failedSnapImages = new Set();
+const failedCharacterImages = new Set();
 let panelReturn = '';
 let restoreFocus = '';
 let renderedPosition = '';
@@ -246,13 +249,29 @@ function playScreen(main) {
     const affinity = el('section', undefined, `affinity ${snap ? 'snap-cast' : ''}`); affinity.setAttribute('aria-label', '현재 등장인물 호감도');
     const meters = el('div', undefined, 'meters');
     meta.cast.forEach(c => {
-      const item = el('div', undefined, `cast-slot ${current?.who === c ? 'speaking' : ''}`); item.dataset.character = c;
+      const speaking = current?.who === c;
+      const item = el('div', undefined, `cast-slot ${speaking ? 'speaking' : ''}`); item.dataset.character = c;
+      item.setAttribute('aria-label', speaking ? `${c} · 현재 화자` : c);
       const relationship = RULES.stages.find(([n]) => state.affinity[c] >= n)[1];
       const badge = el('div', undefined, 'cast-badge');
       badge.append(el('strong', c), el('span', `${state.affinity[c]}/${RULES.max} · ${relationship}`));
+      if (speaking) badge.append(el('span', '말하는 중', 'speaking-label'));
       const meter = el('meter'); meter.min = RULES.min; meter.max = RULES.max; meter.value = state.affinity[c]; meter.setAttribute('aria-label', `${c} 호감도`);
       badge.append(meter); item.append(badge);
-      if (!snap) { const portrait = el('div', undefined, 'portrait'); portrait.setAttribute('aria-label', `${c} 이미지 준비 중`); portrait.append(el('span', c, 'character-name'), el('span', '이미지 준비 중', 'image-note')); item.append(portrait); }
+      if (!snap) {
+        const portrait = el('div', undefined, 'portrait'); const art = CHARACTER_ART[c];
+        if (art && !failedCharacterImages.has(c)) {
+          portrait.classList.add('has-art');
+          const image = el('img', undefined, 'standing'); image.src = art.image; image.alt = `${c} 스탠딩`;
+          image.width = art.width; image.height = art.height; image.decoding = 'async';
+          image.addEventListener('error', () => { failedCharacterImages.add(c); if (screen === 'play' && metadata(state).cast.includes(c)) render(); });
+          portrait.append(image);
+        } else {
+          portrait.setAttribute('aria-label', `${c} 이미지 준비 중`);
+          portrait.append(el('span', c, 'character-name'), el('span', '이미지 준비 중', 'image-note'));
+        }
+        item.append(portrait);
+      }
       meters.append(item);
     });
     affinity.append(meters); stage.append(affinity);
@@ -311,9 +330,10 @@ function next() {
 function nextLine() { next(); render(); }
 function snapBackdrop(id) {
   const snap = SNAPS[id];
+  const source = snapImage(id, state.location);
   const box = el('div', undefined, 'snap-backdrop'); box.dataset.snap = id;
-  if (!failedSnapImages.has(id)) {
-    const image = el('img'); image.src = snap.image; image.alt = snap.description;
+  if (source && !failedSnapImages.has(id)) {
+    const image = el('img'); image.src = source; image.alt = snap.description;
     image.addEventListener('error', () => { failedSnapImages.add(id); if (screen === 'play' && snapPresentation(state)?.id === id) render(); });
     box.append(image);
   } else box.append(el('p', `이미지 준비 중\n${snap.description}`, 'snap-fallback'));

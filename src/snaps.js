@@ -1,5 +1,25 @@
 // ID에서 인물·장면을 추측하지 않는다. 같은 인물의 서로 다른 순간은 독립 ID다.
+// Explicit, visually reviewed source-to-scene associations, not SNAP-N arithmetic.
+// H/1 (unfolded map), HE/1 (whole-page red editing), C/1 (portrait sketches)
+// remain unassigned. No snap4 source exists; B/END art is not inferred from it.
+export const SNAP_ART = {
+  'SNAP2-H': { source: '수소/SNAP-2.png', locations: ['옥상'] },
+  'SNAP3-H': { source: '수소/SNAP-3.png' },
+  'SNAP2-HE': { source: '헬륨/SNAP-2.png' },
+  'SNAP3-HE': { source: '헬륨/SNAP-3.png' },
+  'SNAP2-C': { source: '탄소/SNAP-2.png' },
+  'SNAP3-C': { source: '탄소/SNAP-3.png' },
+  'SNAP-NA': { source: '나트륨/SNAP-1.png' },
+  'SNAP2-NA': { source: '나트륨/SNAP-2.png' },
+  'SNAP3-NA': { source: '나트륨/SNAP-3.png' },
+  'SNAP-CL': { source: '염소/SNAP-1.png' },
+  'SNAP2-CL': { source: '염소/SNAP-2.png' },
+  'SNAP3-CL': { source: '염소/SNAP-3.png' },
+};
 const define = (id, character, scene, name, description) => [id, { character, scene, name, description, image: `${import.meta.env.BASE_URL}assets/snaps/${id}.webp` }];
+// The rooftop art must not turn the later library variant into a rooftop visit.
+// Rendering only: no changes to acquisition, dialogue queues or saved positions.
+export const snapImage = (id, location) => !SNAP_ART[id]?.locations || SNAP_ART[id].locations.includes(location) ? SNAPS[id].image : null;
 export const SNAPS = Object.fromEntries([
   define('SNAP-END-H', 'H', 'END-H', '수소 · 안내 없이 고른 만남', '교문. 수소와 플레이어가 두 방향 사이에 나란히 선다. 안내 없이 고른 만남.'),
   define('SNAP-END-HE', 'HE', 'END-HE', '헬륨 · 직접 남긴 시간', '교문. 헬륨과 플레이어가 각자 가방을 든 채 마주 본다. 직접 남긴 시간의 애정.'),

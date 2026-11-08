@@ -48,7 +48,7 @@ for (let day = 1; day <= 15; day++) test(`${day}일차 점심: 원본 배치 표
         await expect(page.locator('.affinity')).toHaveCount(0);
         await page.locator('.choices button').nth(personIndex).click();
       }
-      await expect(page.locator('.character-name')).toHaveText(names[code]);
+      await expect(page.locator('.cast-badge strong')).toHaveText(names[code]);
       await expect(page.locator('.affinity meter')).toHaveCount(1);
       await expect(page.getByRole('meter', { name: `${names[code]} 호감도`, exact: true })).toHaveCount(1);
     }
