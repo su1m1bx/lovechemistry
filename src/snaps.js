@@ -1,12 +1,15 @@
 // ID에서 인물·장면을 추측하지 않는다. 같은 인물의 서로 다른 순간은 독립 ID다.
 // Explicit, visually reviewed source-to-scene associations, not SNAP-N arithmetic.
-// H/1 (unfolded map), HE/1 (whole-page red editing), C/1 (portrait sketches)
-// remain unassigned. No snap4 source exists; B/END art is not inferred from it.
+// The author confirmed all five SNAP-1 sources belong to their first scenes.
+// SNAP4 is intentionally absent; CA/MG art has not been made yet.
 export const SNAP_ART = {
+  'SNAP-H': { source: '수소/SNAP-1.png' },
   'SNAP2-H': { source: '수소/SNAP-2.png', locations: ['옥상'] },
   'SNAP3-H': { source: '수소/SNAP-3.png' },
+  'SNAP-HE': { source: '헬륨/SNAP-1.png' },
   'SNAP2-HE': { source: '헬륨/SNAP-2.png' },
   'SNAP3-HE': { source: '헬륨/SNAP-3.png' },
+  'SNAP-C': { source: '탄소/SNAP-1.png' },
   'SNAP2-C': { source: '탄소/SNAP-2.png' },
   'SNAP3-C': { source: '탄소/SNAP-3.png' },
   'SNAP-NA': { source: '나트륨/SNAP-1.png' },

@@ -1,7 +1,7 @@
 // Visually checked against the local originals and character designs.
 // Lossless WebP derivatives preserve every decoded pixel, including alpha.
 // HE has an opaque white background: do not remove it with CSS blending.
-// The silver-haired image filed under calcium is NOT assigned to CA or MG.
+// The author confirmed CA/MG art is not made yet; keep their placeholders.
 const standing = code => `${import.meta.env.BASE_URL}assets/characters/${code}.webp`;
 export const CHARACTER_ART = {
   수소: { image: standing('H'), width: 1152, height: 1744 },

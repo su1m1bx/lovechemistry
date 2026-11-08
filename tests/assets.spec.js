@@ -7,7 +7,7 @@ import os from 'node:os';
 import { build } from 'vite';
 const KEY = 'love-chemistry.prototype.v1';
 const CODES = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', CL: '염소' };
-const SNAP_IDS = ['SNAP2-H', 'SNAP3-H', 'SNAP2-HE', 'SNAP3-HE', 'SNAP2-C', 'SNAP3-C', 'SNAP-NA', 'SNAP2-NA', 'SNAP3-NA', 'SNAP-CL', 'SNAP2-CL', 'SNAP3-CL'];
+const SNAP_IDS = ['SNAP-H', 'SNAP2-H', 'SNAP3-H', 'SNAP-HE', 'SNAP2-HE', 'SNAP3-HE', 'SNAP-C', 'SNAP2-C', 'SNAP3-C', 'SNAP-NA', 'SNAP2-NA', 'SNAP3-NA', 'SNAP-CL', 'SNAP2-CL', 'SNAP3-CL'];
 const game = s => { const { ui, ...rest } = s; return rest; };
 async function load(page, s, ledger = null) {
   await page.evaluate(([key, s, ledger]) => { localStorage.setItem(key, JSON.stringify(s)); if (ledger) localStorage.setItem('love-chemistry.helium-reservations.v1', JSON.stringify(ledger)); }, [KEY, s, ledger]);
@@ -60,16 +60,16 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
   await page.screenshot({ path: info.outputPath(`${id}-follow.png`) });
 });
 
-test('옥상 전용 SNAP2-H를 도서관 변형에 재사용하지 않음·미제공/미완성 스냅 fallback 진행', async ({ page }) => {
+test('옥상 전용 SNAP2-H를 도서관 변형에 재사용하지 않음·미제공 스냅 fallback 진행', async ({ page }) => {
   await page.goto('/');
   const s = await page.evaluate(async () => { const { Run, focus } = await import('/tests/mid-driver.js'); const run = new Run(); run.to('DAY16-HANDOFF', focus('H')); return run.snaps.find(s => s.id === 'SNAP2-H').state; });
   const library = structuredClone(s); library.location = '도서관'; library.place = '도서관'; await load(page, library); await expect(page.locator('.snap-fallback')).toContainText('이미지 준비 중'); await expect(page.locator('.snap-backdrop img')).toHaveCount(0);
   await page.getByRole('button', { name: '스냅 정보 보기 ▸' }).click(); await page.getByRole('button', { name: '스냅 닫고 계속' }).click(); await expect(page.locator('main')).toHaveAttribute('data-snap-phase', 'follow');
-  const missing = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).snapState('SNAP-H')); await load(page, missing.s); await expect(page.locator('.snap-fallback')).toContainText('이미지 준비 중'); const before = await save(page);
+  const missing = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).snapState('SNAP-MG')); await load(page, missing.s); await expect(page.locator('.snap-fallback')).toContainText('이미지 준비 중'); const before = await save(page);
   await page.getByRole('button', { name: '스냅 정보 보기 ▸' }).click(); await page.getByRole('button', { name: '스냅 닫고 계속' }).click(); expect((await save(page)).affinity).toEqual(before.affinity);
 });
 
-test('배포 하위 경로 실제 production: 스탠딩5·스냅12 전부 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
+test('배포 하위 경로 실제 production: 스탠딩5·스냅15 전부 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
   test.setTimeout(120000); await page.goto('/');
   const fixtures = await page.evaluate(async ids => { const f = await import('/tests/asset-fixtures.js'); return { characters: Object.keys((await import('/src/character-art.js')).CHARACTER_ART), states: Object.keys({ H:1,HE:1,C:1,NA:1,CL:1 }).map(c => f.standingState(c)), snaps: ids.map(id => f.snapState(id)) }; }, SNAP_IDS);
   // Build the current source into an isolated directory: npm test must work
