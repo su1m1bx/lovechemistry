@@ -11,8 +11,11 @@ import { exam2Answer, exam2Questions, prepareExam2Commit, persistExam2, secondSc
 import { commitHelium, reconcileHelium, HeliumConflict, persistVerified } from './helium.js';
 import { CHARACTER_ART } from './character-art.js';
 import { snapImage } from './snaps.js';
+import { createTypewriter } from './typewriter.js';
 
 const app = document.querySelector('#app');
+const typewriter = createTypewriter();
+let loadedDialogue = false;
 let state = null;
 let screen = 'splash';
 let message = '';
@@ -59,6 +62,8 @@ function load() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) throw new Error('저장된 진행이 없습니다.');
     const restored = decodeSave(raw); state = restored; pendingExam2 = null; pendingProgress = null; screen = 'play'; panel = ''; message = '저장한 장면과 모든 기록을 불러왔습니다.';
+    // Loaded lines are always complete; the next newly entered line types.
+    typewriter.reset(); loadedDialogue = true;
     if (restored.late) {
       try { const reservation = reconcileHelium(restored, localStorage, decodeSave); if (reservation) pendingProgress = { kind: 'conflict', reservation }; }
       catch (error) { pendingProgress = { kind: 'blocked', error: error.message }; }
@@ -301,6 +306,7 @@ function playScreen(main) {
     const area = el('section', undefined, 'learning-area'); area.tabIndex = 0; area.setAttribute('aria-label', '수업 자료'); area.append(learningCard(card)); center.append(area);
   }
   const prose = el('p', text.replaceAll('{플레이어명}', state.name), 'dialogue-text');
+  if (current && !card) prose.dataset.typewriter = '';
   if (current && !card && text.length > 330) {
     const area = el('section', undefined, 'learning-area lesson-prose'); area.tabIndex = 0; area.setAttribute('aria-label', who);
     area.append(el('h3', who), prose); center.append(area);
@@ -326,6 +332,7 @@ function playScreen(main) {
 }
 function next() {
   if (!activeTab || pendingProgress || screen !== 'play' || panel || !state.queue[state.index] || ['EX-PAPER', 'EX-RESULT', 'EX2-PAPER', 'EX2-RESULT'].includes(state.scene)) return;
+  if (typewriter.finish()) return;
   if (state.scene.startsWith('END-')) {
     const candidate = structuredClone(state);
     if (!revealSnap(candidate)) advance(candidate);
@@ -458,6 +465,8 @@ function progressRecovery() {
   return box;
 }
 function render() {
+  // Detach before replacing DOM: a stale callback can never paint a new scene.
+  typewriter.detach();
   const focusedLabel = document.activeElement?.textContent;
   const position = `${screen}:${state?.day}:${state?.scene}:${state?.index}:${state?.queue[state.index]?.text}:${state?.exam.index}`;
   const scrollPositions = position === renderedPosition ? [...app.querySelectorAll('.panel-content, .learning-area, .lab, .exam-question, .exam-explanations, .dialogue-text')].map(node => [node.className, node.scrollTop]) : [];
@@ -466,6 +475,10 @@ function render() {
   app.replaceChildren(topbar()); const main = el('main');
   if (screen === 'splash') splashScreen(main); else if (screen === 'title') titleScreen(main); else if (screen === 'intro') introScreen(main); else if (screen === 'name') nameScreen(main); else playScreen(main);
   app.append(main);
+  const typed = main.querySelector('[data-typewriter]');
+  const lineKey = `${position}:${main.dataset.snapPhase || ''}`;
+  typewriter.bind(typed, lineKey, typed?.textContent || '', { instant: loadedDialogue, pause: Boolean(panel) || document.hidden });
+  loadedDialogue = false;
   if (!activeTab) app.append(el('p', navigator.locks ? '다른 탭이 진행 중입니다. 이 탭은 읽기 전용입니다. 진행 중인 탭을 닫은 뒤 새로고침해 주세요.' : '단일 탭 잠금을 지원하지 않는 브라우저입니다. 진행과 헬륨 요청은 차단했습니다. 지원 브라우저에서 열어 주세요.', 'status'));
   const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status);
   clearTimeout(statusTimer);
@@ -498,5 +511,6 @@ document.addEventListener('keydown', event => {
     choices[(choices.indexOf(document.activeElement) + (event.key === 'ArrowDown' ? 1 : choices.length - 1)) % choices.length]?.focus();
   }
 });
+document.addEventListener('visibilitychange', () => typewriter.pause(Boolean(panel) || document.hidden));
 render();
 setTimeout(() => { if (screen === 'splash') { screen = 'title'; render(); } }, 650);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' });
 import { beginNew, menuAction } from './ui-driver.js';
 
 const SAVE_KEY = 'love-chemistry.prototype.v1';

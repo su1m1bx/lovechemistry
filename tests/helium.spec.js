@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' });
 import { menuAction } from './ui-driver.js';
 const SAVE = 'love-chemistry.prototype.v1';
 const LEDGER = 'love-chemistry.helium-reservations.v1';

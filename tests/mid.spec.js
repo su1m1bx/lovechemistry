@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' });
 
 const KEY = 'love-chemistry.prototype.v1';
 for (const [code, before, total, snap] of [

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' }); // Animation/input sequencing has dedicated coverage.
 import { beginNew, menuAction } from './ui-driver.js';
 
 const KEY = 'love-chemistry.prototype.v1';

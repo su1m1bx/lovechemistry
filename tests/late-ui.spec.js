@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' });
 import { menuAction, beginNew } from './ui-driver.js';
 const KEY = 'love-chemistry.prototype.v1';
 async function load(page, s) { await page.evaluate(([key, s]) => localStorage.setItem(key, JSON.stringify(s)), [KEY, s]); await menuAction(page, '불러오기'); }

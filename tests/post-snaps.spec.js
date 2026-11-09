@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' });
 import { menuAction } from './ui-driver.js';
 const KEY = 'love-chemistry.prototype.v1';
 for (const id of ['SNAP3-H', 'SNAP3-HE', 'SNAP3-NA', 'SNAP3-MG', 'SNAP3-CL', ...['H', 'C', 'NA', 'MG', 'CA', 'CL'].map(c => `SNAP-B-${c}`)]) test(`${id}: 그림/알림/후속/정본복귀 저장·없는 이미지·기획득/재진입 중복0`, async ({ page }) => {

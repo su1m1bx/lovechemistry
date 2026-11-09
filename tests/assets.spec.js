@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ reducedMotion: 'reduce' }); // Timing behavior is covered in typewriter.spec.js.
 import { menuAction } from './ui-driver.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,16 +21,16 @@ async function portraitFits(page) {
     const r = img.getBoundingClientRect(); const p = img.closest('.portrait').getBoundingClientRect(); const d = document.querySelector('.dialogue').getBoundingClientRect(); const css = getComputedStyle(img);
     const paintedHeight = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight) * img.naturalHeight;
     const paintedTop = r.bottom - paintedHeight;
-    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, paintedHeight, paintedTop, pBottom: p.bottom, dTop: d.top, dialogueFill: getComputedStyle(document.querySelector('.dialogue')).backgroundColor, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
+    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, paintedHeight, paintedTop, pBottom: p.bottom, dTop: d.top, dialogueFill: getComputedStyle(document.querySelector('.dialogue')).backgroundImage, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
   }));
   for (const r of result) {
     expect(r.fit).toBe('contain'); expect(r.blend).toBe('normal'); expect(r.h).toBeGreaterThan(30);
     expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.right).toBeLessThanOrEqual(r.vw);
     expect(r.bottom).toBeLessThanOrEqual(r.vh); expect(r.bottom).toBeLessThanOrEqual(r.pBottom + 1);
-    // Figma intentionally layers the torso behind a 30%-white dialogue. Do
-    // not reintroduce the old "whole sprite above the dialogue" size limit.
+    // The VN composition deliberately layers the torso behind a translucent
+    // pink dialogue; faces remain above it and the originals are never cropped.
     expect(r.paintedTop + r.paintedHeight * .45).toBeLessThanOrEqual(r.dTop);
-    if (r.bottom > r.dTop) expect(r.dialogueFill).toBe('rgba(255, 255, 255, 0.3)');
+    if (r.bottom > r.dTop) expect(r.dialogueFill).toContain('255, 222, 239');
   }
   // Check the painted raster, not its possibly letterboxed element box.
   for (const r of result) {
@@ -56,11 +57,11 @@ for (const viewport of [{ width: 1440, height: 1024 }, { width: 1440, height: 90
   });
 }
 
-test('Figma 1:27/1:39: 1440×1024의 스탠딩·HUD·대사창 실측, 선택 중에도 무대 유지', async ({ page }, info) => {
+test('밝은 VN: 큰 스탠딩·작은 HUD·하단 대사창, 선택 중에도 무대 유지', async ({ page }, info) => {
   await page.setViewportSize({ width: 1440, height: 1024 }); await page.goto('/');
   const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s);
   await loaded(page.locator('.standing'));
-  for (const [selector, expected] of [['header', [0, 0, 1440, 122]], ['.standing', [402, 230, 498, 755]], ['.dialogue', [85, 695, 1223, 290]]]) {
+  for (const [selector, expected] of [['header', [0, 0, 1440, 81.92]], ['.standing', [432, 184.32, 576, 800.68]], ['.dialogue', [85, 695, 1223, 290]]]) {
     const box = await page.locator(selector).boundingBox();
     for (const [i, key] of ['x', 'y', 'width', 'height'].entries()) expect(Math.abs(box[key] - expected[i]), `${selector} ${key}`).toBeLessThan(2);
   }
@@ -72,10 +73,9 @@ test('Figma 1:27/1:39: 1440×1024의 스탠딩·HUD·대사창 실측, 선택 �
   for (const button of buttons) { const r = await button.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(189); expect(r.width).toBeGreaterThan(990); expect(r.y + r.height).toBeLessThan(dialogue.y - 20); }
   await page.screenshot({ path: info.outputPath('figma-choices.png') });
   const multi = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).multiState()); await load(page, multi);
-  // Figma 1:107 places the two affinity/character columns at these centers.
-  for (const [i, center] of [308.5, 954.5].entries()) {
+  for (const [i, center] of [374.4, 1065.6].entries()) {
     const slot = await page.locator('.cast-slot').nth(i).boundingBox(); const badge = await page.locator('.cast-badge').nth(i).boundingBox();
-    expect(Math.abs(slot.x + slot.width / 2 - center)).toBeLessThan(2); expect(Math.abs(badge.y - 151)).toBeLessThan(2);
+    expect(Math.abs(slot.x + slot.width / 2 - center)).toBeLessThan(2); expect(Math.abs(badge.y + badge.height - slot.y)).toBeLessThan(2);
   }
 });
 
