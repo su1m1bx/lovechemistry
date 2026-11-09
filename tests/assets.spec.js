@@ -19,19 +19,28 @@ async function portraitFits(page) {
   const result = await page.locator('.standing').evaluateAll(images => images.map(img => {
     const r = img.getBoundingClientRect(); const p = img.closest('.portrait').getBoundingClientRect(); const d = document.querySelector('.dialogue').getBoundingClientRect(); const css = getComputedStyle(img);
     const paintedHeight = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight) * img.naturalHeight;
-    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, paintedHeight, pBottom: p.bottom, dTop: d.top, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
+    const paintedTop = r.bottom - paintedHeight;
+    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, h: r.height, paintedHeight, paintedTop, pBottom: p.bottom, dTop: d.top, dialogueFill: getComputedStyle(document.querySelector('.dialogue')).backgroundColor, vw: innerWidth, vh: innerHeight, fit: css.objectFit, blend: css.mixBlendMode };
   }));
-  for (const r of result) { expect(r.fit).toBe('contain'); expect(r.blend).toBe('normal'); expect(r.h).toBeGreaterThan(30); expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.right).toBeLessThanOrEqual(r.vw); expect(r.bottom).toBeLessThanOrEqual(r.dTop - 8); expect(r.bottom).toBeLessThanOrEqual(r.pBottom + 1); }
-  // Check the painted raster, not just its possibly letterboxed element box.
-  // These floors prevent the previous undersized standings from regressing.
+  for (const r of result) {
+    expect(r.fit).toBe('contain'); expect(r.blend).toBe('normal'); expect(r.h).toBeGreaterThan(30);
+    expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.right).toBeLessThanOrEqual(r.vw);
+    expect(r.bottom).toBeLessThanOrEqual(r.vh); expect(r.bottom).toBeLessThanOrEqual(r.pBottom + 1);
+    // Figma intentionally layers the torso behind a 30%-white dialogue. Do
+    // not reintroduce the old "whole sprite above the dialogue" size limit.
+    expect(r.paintedTop + r.paintedHeight * .45).toBeLessThanOrEqual(r.dTop);
+    if (r.bottom > r.dTop) expect(r.dialogueFill).toBe('rgba(255, 255, 255, 0.3)');
+  }
+  // Check the painted raster, not its possibly letterboxed element box.
   for (const r of result) {
     const minimum = r.vw <= 600 ? r.vh < 700 ? 195 : result.length > 1 ? 290 : 370 : r.vh < 550 ? 150 : r.vh < 800 ? 310 : 430;
     expect(r.paintedHeight).toBeGreaterThanOrEqual(minimum);
+    if (r.vw > 600) expect(r.paintedHeight / r.vh).toBeGreaterThan(.65);
   }
   for (let i = 1; i < result.length; i++) expect(result[i - 1].right).toBeLessThanOrEqual(result[i].x + 1);
 }
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
+for (const viewport of [{ width: 1440, height: 1024 }, { width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
   for (const [code, name] of Object.entries(CODES)) test(`${viewport.width}×${viewport.height} ${name}: 실제 대화 스탠딩·현재 화자·원본 전체 비율`, async ({ page }, info) => {
     await page.setViewportSize(viewport); await page.goto('/'); const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s);
     await expect(page.locator('.cast-slot')).toHaveCount(1); await expect(page.locator('.speaking')).toHaveAttribute('data-character', name); await expect(page.locator('.speaking-label')).toHaveText('말하는 중');
@@ -47,10 +56,48 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720
   });
 }
 
+test('Figma 1:27/1:39: 1440×1024의 스탠딩·HUD·대사창 실측, 선택 중에도 무대 유지', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1024 }); await page.goto('/');
+  const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s);
+  await loaded(page.locator('.standing'));
+  for (const [selector, expected] of [['header', [0, 0, 1440, 122]], ['.standing', [402, 230, 498, 755]], ['.dialogue', [85, 695, 1223, 290]]]) {
+    const box = await page.locator(selector).boundingBox();
+    for (const [i, key] of ['x', 'y', 'width', 'height'].entries()) expect(Math.abs(box[key] - expected[i]), `${selector} ${key}`).toBeLessThan(2);
+  }
+  await page.screenshot({ path: info.outputPath('figma-basic.png') });
+  const choice = await page.evaluate(async () => { const f = await import('/tests/asset-fixtures.js'); const e = await import('/src/engine.js'); const s = f.standingState('H'); while (s.index < s.queue.length) e.advance(s); return s; });
+  await load(page, choice); await expect(page.locator('.choices')).toBeVisible(); await expect(page.locator('.standing')).toBeVisible();
+  const dialogue = await page.locator('.dialogue').boundingBox(); expect(Math.abs(dialogue.y - 695)).toBeLessThan(2);
+  const buttons = await page.locator('.choices button').all(); expect(buttons.length).toBeGreaterThan(1);
+  for (const button of buttons) { const r = await button.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(189); expect(r.width).toBeGreaterThan(990); expect(r.y + r.height).toBeLessThan(dialogue.y - 20); }
+  await page.screenshot({ path: info.outputPath('figma-choices.png') });
+  const multi = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).multiState()); await load(page, multi);
+  // Figma 1:107 places the two affinity/character columns at these centers.
+  for (const [i, center] of [308.5, 954.5].entries()) {
+    const slot = await page.locator('.cast-slot').nth(i).boundingBox(); const badge = await page.locator('.cast-badge').nth(i).boundingBox();
+    expect(Math.abs(slot.x + slot.width / 2 - center)).toBeLessThan(2); expect(Math.abs(badge.y - 151)).toBeLessThan(2);
+  }
+});
+
+for (const viewport of [{ width: 1440, height: 1024 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) test(`${viewport.width}×${viewport.height} 타이틀: Figma 5인 에셋과 앞뒤 배치·전체 원본·메뉴 접근`, async ({ page }, info) => {
+  await page.setViewportSize(viewport); await page.goto('/'); await expect(page.getByRole('button', { name: '새 게임', exact: true })).toBeVisible();
+  const images = page.locator('.title-standing'); await expect(images).toHaveCount(5);
+  expect(await images.evaluateAll(nodes => nodes.map(n => n.dataset.character))).toEqual(['염소', '탄소', '나트륨', '헬륨', '수소']);
+  for (const image of await images.all()) {
+    await loaded(image); await expect(image).toHaveCSS('object-fit', 'contain'); await expect(image).toHaveCSS('mix-blend-mode', 'normal');
+    const r = await image.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.x + r.width).toBeLessThanOrEqual(viewport.width + 1); expect(r.y + r.height).toBeLessThanOrEqual(viewport.height + 1);
+  }
+  await page.screenshot({ path: info.outputPath('figma-title.png') });
+  await page.getByRole('button', { name: '새 게임', exact: true }).click(); await expect(page.locator('.transfer-screen')).toBeVisible();
+});
+
 test('미제공 MG/CA와 스탠딩 로드 실패는 기존 자리표시자, 잘못된 인물로 대체하지 않음', async ({ page }) => {
+  // Install before the title loads H too; decoded-image caches may otherwise
+  // satisfy the later standing without issuing the request being aborted.
+  await page.route('**/assets/characters/H.webp', route => route.abort());
   await page.goto('/');
   for (const code of ['MG', 'CA']) { const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s); await expect(page.locator('.standing')).toHaveCount(0); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); }
-  await page.route('**/assets/characters/H.webp', route => route.abort()); const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s));
+  const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s));
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) for (const id of SNAP_IDS) test(`${viewport.width}×${viewport.height} ${id}: 실제 그림·표시전/그림/알림/후속 저장 복원·효과 불변`, async ({ page }, info) => {

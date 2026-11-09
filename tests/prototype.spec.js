@@ -45,7 +45,8 @@ async function toLab(page, attitude = 0, review = 0) {
 for (const [place, label] of [[3, '도서관'], [0, '옥상']]) test(`점심 위치 표시: 전날 ${label} → 다음 날 선택 전·후 및 저장 복원`, async ({ page }) => {
   const location = async expected => {
     await expect(page.locator('.day-strip span').nth(1)).toHaveText(expected);
-    await expect(page.locator('.location-label')).toHaveText(expected);
+    // Figma keeps the visible location in the HUD, not a duplicate stage label.
+    await expect(page.locator('.stage')).toHaveAttribute('data-location', expected);
   };
   const restore = async expected => {
     const before = await saved(page);

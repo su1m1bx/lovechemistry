@@ -99,7 +99,7 @@ function openPanel(next) {
 }
 function closePanel() { panel = ''; restoreFocus = panelReturn; }
 function menuButtons() {
-  return [button('저장', save), button('불러오기', load), button('핵심 노트', () => openPanel('notes')), button('기록', () => openPanel('records')), button('시작 화면', returnHome)];
+  return [button('저장', save), button('불러오기', load), button('기록', () => openPanel('records')), button('핵심 노트', () => openPanel('notes')), button('시작 화면', returnHome)];
 }
 function returnHome() {
   if (pendingProgress) { state = null; message = '저장되지 않은 메모리 진행은 버렸습니다. 기존 저장과 성공한 요청 예약은 보존했습니다.'; }
@@ -124,13 +124,21 @@ function titleScreen(main) {
   const card = el('section', undefined, 'menu-card');
   card.append(button('새 게임', () => { screen = 'intro'; message = ''; }, false, 'primary'), button('불러오기', load));
   if (state) card.append(button('현재 진행 계속하기', () => { screen = 'play'; }));
-  card.append(button('도움말 · GitHub README ↗', help), el('p', '저장은 이 브라우저의 LocalStorage에 보관됩니다. 새 게임은 기존 저장 슬롯을 덮어쓰지 않습니다. 헬륨 요청 원장은 일반 저장과 별도로 유지됩니다. 브라우저 데이터 삭제·개발자 도구 조작·저장과 원장의 과거 동시 복원·다른 기기는 통제할 수 없습니다. 한 탭에서만 진행할 수 있습니다.', 'muted'));
+  card.append(button('도움말 · GitHub README ↗', help));
+  const storage = el('details', undefined, 'title-storage');
+  storage.append(el('summary', '저장 안내'), el('p', '저장은 이 브라우저의 LocalStorage에 보관됩니다. 새 게임은 기존 저장 슬롯을 덮어쓰지 않습니다. 헬륨 요청 원장은 일반 저장과 별도로 유지됩니다. 브라우저 데이터 삭제·개발자 도구 조작·저장과 원장의 과거 동시 복원·다른 기기는 통제할 수 없습니다. 한 탭에서만 진행할 수 있습니다.', 'muted'));
+  card.append(storage);
   intro.append(card);
   const welcome = el('section', undefined, 'title-art');
-  welcome.append(el('p', '같은 자료를, 서로 다른 마음으로.', 'title-quote'));
-  const names = el('div', undefined, 'title-names');
-  Object.entries(PEOPLE).forEach(([code, name]) => { const tile = el('div'); tile.append(el('span', code === 'NA' ? 'Na' : code === 'HE' ? 'He' : code === 'MG' ? 'Mg' : code === 'CA' ? 'Ca' : code === 'CL' ? 'Cl' : code), el('span', name)); names.append(tile); });
-  welcome.append(names, el('p', '1~30일차 · 방학식까지', 'edition'));
+  welcome.setAttribute('aria-label', '러브 앤 케미스트리 등장인물');
+  // Confirmed art in Figma 1:7's back/front slots, preserving HE's white matte.
+  ['염소', '탄소', '나트륨', '헬륨', '수소'].forEach(name => {
+    const image = el('img', undefined, 'title-standing'); image.dataset.character = name;
+    image.src = CHARACTER_ART[name].image; image.alt = name;
+    image.width = CHARACTER_ART[name].width; image.height = CHARACTER_ART[name].height;
+    image.addEventListener('error', () => { image.replaceWith(el('span', `${name} · 이미지 준비 중`, 'title-art-fallback')); });
+    welcome.append(image);
+  });
   main.append(intro, welcome);
 }
 function introScreen(main) {
@@ -244,7 +252,6 @@ function playScreen(main) {
   const stage = el('section', undefined, 'stage'); stage.setAttribute('aria-label', '캐릭터 영역');
   stage.dataset.location = meta.location;
   if (snap) stage.append(snapBackdrop(snap.id));
-  else stage.append(el('span', meta.location, 'location-label'));
   if (meta.cast.length && snap?.phase !== 'image') {
     const affinity = el('section', undefined, `affinity ${snap ? 'snap-cast' : ''}`); affinity.setAttribute('aria-label', '현재 등장인물 호감도');
     const meters = el('div', undefined, 'meters');
@@ -309,7 +316,7 @@ function playScreen(main) {
       const choices = el('section', undefined, 'choices'); choices.setAttribute('aria-label', '행동 선택');
       choices.append(el('p', '어떤 마음을 전할까?', 'eyebrow'));
       available.forEach((choice, i) => choices.append(button(`${String(i + 1).padStart(2, '0')}  ${choice.label}`, () => runChoice(choice, i), choice.disabled)));
-      center.append(choices);
+      center.append(choices); main.classList.add('has-choices');
     }
     if (['DAY16-HANDOFF', 'DAY20-HANDOFF'].includes(state.scene)) dialogue.append(button('진행 저장', save), button('시작 화면으로', returnHome));
   }
@@ -455,6 +462,7 @@ function render() {
   const position = `${screen}:${state?.day}:${state?.scene}:${state?.index}:${state?.queue[state.index]?.text}:${state?.exam.index}`;
   const scrollPositions = position === renderedPosition ? [...app.querySelectorAll('.panel-content, .learning-area, .lab, .exam-question, .exam-explanations, .dialogue-text')].map(node => [node.className, node.scrollTop]) : [];
   renderedPosition = position;
+  app.dataset.screen = screen;
   app.replaceChildren(topbar()); const main = el('main');
   if (screen === 'splash') splashScreen(main); else if (screen === 'title') titleScreen(main); else if (screen === 'intro') introScreen(main); else if (screen === 'name') nameScreen(main); else playScreen(main);
   app.append(main);
