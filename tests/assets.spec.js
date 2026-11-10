@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import os from 'node:os';
 import { build } from 'vite';
 const KEY = 'love-chemistry.prototype.v1';
-const CODES = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', CL: '염소' };
+const CODES = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', CL: '염소', CA: '칼슘' };
 const SNAP_IDS = ['SNAP-H', 'SNAP2-H', 'SNAP3-H', 'SNAP-HE', 'SNAP2-HE', 'SNAP3-HE', 'SNAP-C', 'SNAP2-C', 'SNAP3-C', 'SNAP-NA', 'SNAP2-NA', 'SNAP3-NA', 'SNAP-CL', 'SNAP2-CL', 'SNAP3-CL'];
 const game = s => { const { ui, ...rest } = s; return rest; };
 async function load(page, s, ledger = null) {
@@ -45,7 +45,7 @@ for (const viewport of [{ width: 1440, height: 1024 }, { width: 1440, height: 90
   for (const [code, name] of Object.entries(CODES)) test(`${viewport.width}×${viewport.height} ${name}: 실제 대화 스탠딩·현재 화자·원본 전체 비율`, async ({ page }, info) => {
     await page.setViewportSize(viewport); await page.goto('/'); const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s);
     await expect(page.locator('.cast-slot')).toHaveCount(1); await expect(page.locator('.speaking')).toHaveAttribute('data-character', name); await expect(page.locator('.speaking-label')).toHaveText('말하는 중');
-    await loaded(page.getByAltText(`${name} 스탠딩`)); await portraitFits(page); expect(game(await save(page))).toEqual(game(s));
+    await loaded(page.getByAltText(`${name} 스탠딩`)); await expect(page.getByAltText(`${name} 스탠딩`)).toHaveAttribute('src', new RegExp(`/assets/characters/${code}\\.webp$`)); await portraitFits(page); expect(game(await save(page))).toEqual(game(s));
     await page.screenshot({ path: info.outputPath(`standing-${code}.png`) });
   });
   test(`${viewport.width}×${viewport.height} 다인: 실제 cast만·이름/미터/화자 분리·각 스탠딩 잘림 없음`, async ({ page }, info) => {
@@ -91,12 +91,13 @@ for (const viewport of [{ width: 1440, height: 1024 }, { width: 390, height: 844
   await page.getByRole('button', { name: '새 게임', exact: true }).click(); await expect(page.locator('.transfer-screen')).toBeVisible();
 });
 
-test('미제공 MG/CA와 스탠딩 로드 실패는 기존 자리표시자, 잘못된 인물로 대체하지 않음', async ({ page }) => {
+test('미제공 MG와 CA/H 로드 실패는 기존 자리표시자, 잘못된 인물로 대체하지 않음', async ({ page }) => {
   // Install before the title loads H too; decoded-image caches may otherwise
   // satisfy the later standing without issuing the request being aborted.
   await page.route('**/assets/characters/H.webp', route => route.abort());
+  await page.route('**/assets/characters/CA.webp', route => route.abort());
   await page.goto('/');
-  for (const code of ['MG', 'CA']) { const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s); await expect(page.locator('.standing')).toHaveCount(0); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); }
+  for (const code of ['MG', 'CA']) { const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s); await expect(page.locator('.standing')).toHaveCount(0); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s)); }
   const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s));
 });
 
@@ -124,9 +125,9 @@ test('옥상 전용 SNAP2-H를 도서관 변형에 재사용하지 않음·미�
   await page.getByRole('button', { name: '스냅 정보 보기 ▸' }).click(); await page.getByRole('button', { name: '스냅 닫고 계속' }).click(); expect((await save(page)).affinity).toEqual(before.affinity);
 });
 
-test('배포 하위 경로 실제 production: 스탠딩5·스냅15 전부 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
+test('배포 하위 경로 실제 production: 스탠딩6·스냅15 전부 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
   test.setTimeout(120000); await page.goto('/');
-  const fixtures = await page.evaluate(async ids => { const f = await import('/tests/asset-fixtures.js'); return { characters: Object.keys((await import('/src/character-art.js')).CHARACTER_ART), states: Object.keys({ H:1,HE:1,C:1,NA:1,CL:1 }).map(c => f.standingState(c)), snaps: ids.map(id => f.snapState(id)) }; }, SNAP_IDS);
+  const fixtures = await page.evaluate(async ({ ids, codes }) => { const f = await import('/tests/asset-fixtures.js'); return { characters: Object.keys((await import('/src/character-art.js')).CHARACTER_ART), states: codes.map(c => f.standingState(c)), snaps: ids.map(id => f.snapState(id)) }; }, { ids: SNAP_IDS, codes: Object.keys(CODES) });
   // Build the current source into an isolated directory: npm test must work
   // without a pre-existing dist, and browser projects must not overwrite it.
   const temp = path.join(os.tmpdir(), 'opencode'); await fs.mkdir(temp, { recursive: true });

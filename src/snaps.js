@@ -1,7 +1,7 @@
 // ID에서 인물·장면을 추측하지 않는다. 같은 인물의 서로 다른 순간은 독립 ID다.
 // Explicit, visually reviewed source-to-scene associations, not SNAP-N arithmetic.
 // The author confirmed all five SNAP-1 sources belong to their first scenes.
-// SNAP4 is intentionally absent; CA/MG art has not been made yet.
+// SNAP4 is intentionally absent; CA/MG snap illustrations remain unavailable.
 export const SNAP_ART = {
   'SNAP-H': { source: '수소/SNAP-1.png' },
   'SNAP2-H': { source: '수소/SNAP-2.png', locations: ['옥상'] },
