@@ -112,7 +112,10 @@ function returnHome() {
 }
 function logo() {
   const box = el('div', undefined, 'logo');
-  box.append(el('p', 'LOVE & CHEMISTRY', 'eyebrow'), el('h1', '러브 앤\n케미스트리'), el('span', '마음이 만나는 작은 학교 이야기', 'subtitle'));
+  const heading = el('h1'); const image = el('img', undefined, 'game-logo');
+  image.src = `${import.meta.env.BASE_URL}assets/ui/logo.webp`; image.alt = '러브 앤 케미스트리'; image.width = 1698; image.height = 926;
+  image.addEventListener('error', () => { image.replaceWith(document.createTextNode('러브 앤 케미스트리')); });
+  heading.append(image); box.append(heading, el('span', '마음이 만나는 작은 학교 이야기', 'subtitle'));
   return box;
 }
 function splashScreen(main) {
@@ -136,14 +139,10 @@ function titleScreen(main) {
   intro.append(card);
   const welcome = el('section', undefined, 'title-art');
   welcome.setAttribute('aria-label', '러브 앤 케미스트리 등장인물');
-  // Confirmed art in Figma 1:7's back/front slots, preserving HE's white matte.
-  ['염소', '탄소', '나트륨', '헬륨', '수소'].forEach(name => {
-    const image = el('img', undefined, 'title-standing'); image.dataset.character = name;
-    image.src = CHARACTER_ART[name].image; image.alt = name;
-    image.width = CHARACTER_ART[name].width; image.height = CHARACTER_ART[name].height;
-    image.addEventListener('error', () => { image.replaceWith(el('span', `${name} · 이미지 준비 중`, 'title-art-fallback')); });
-    welcome.append(image);
-  });
+  const home = el('img', undefined, 'title-home'); home.src = `${import.meta.env.BASE_URL}assets/ui/home.webp`;
+  home.alt = '러브 앤 케미스트리의 일곱 등장인물'; home.width = 1350; home.height = 826;
+  home.addEventListener('error', () => { home.replaceWith(el('span', '등장인물 이미지 준비 중', 'title-art-fallback')); });
+  welcome.append(home);
   main.append(intro, welcome);
 }
 function introScreen(main) {

@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import os from 'node:os';
 import { build } from 'vite';
 const KEY = 'love-chemistry.prototype.v1';
-const CODES = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', CL: '염소', CA: '칼슘' };
+const CODES = { H: '수소', HE: '헬륨', C: '탄소', NA: '나트륨', CL: '염소', CA: '칼슘', MG: '마그네슘' };
 const SNAP_IDS = ['SNAP-H', 'SNAP2-H', 'SNAP3-H', 'SNAP-HE', 'SNAP2-HE', 'SNAP3-HE', 'SNAP-C', 'SNAP2-C', 'SNAP3-C', 'SNAP-NA', 'SNAP2-NA', 'SNAP3-NA', 'SNAP-CL', 'SNAP2-CL', 'SNAP3-CL'];
 const game = s => { const { ui, ...rest } = s; return rest; };
 async function load(page, s, ledger = null) {
@@ -79,10 +79,11 @@ test('밝은 VN: 큰 스탠딩·작은 HUD·하단 대사창, 선택 중에도 �
   }
 });
 
-for (const viewport of [{ width: 1440, height: 1024 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) test(`${viewport.width}×${viewport.height} 타이틀: Figma 5인 에셋과 앞뒤 배치·전체 원본·메뉴 접근`, async ({ page }, info) => {
+for (const viewport of [{ width: 1440, height: 1024 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) test(`${viewport.width}×${viewport.height} 타이틀: 제공된 홈 합성 이미지·로고·전체 원본·메뉴 접근`, async ({ page }, info) => {
   await page.setViewportSize(viewport); await page.goto('/'); await expect(page.getByRole('button', { name: '새 게임', exact: true })).toBeVisible();
-  const images = page.locator('.title-standing'); await expect(images).toHaveCount(5);
-  expect(await images.evaluateAll(nodes => nodes.map(n => n.dataset.character))).toEqual(['염소', '탄소', '나트륨', '헬륨', '수소']);
+  const images = page.locator('.title-home, .game-logo'); await expect(images).toHaveCount(2);
+  await expect(page.locator('.title-home')).toHaveAttribute('src', /\/assets\/ui\/home\.webp$/);
+  await expect(page.locator('.game-logo')).toHaveAttribute('src', /\/assets\/ui\/logo\.webp$/);
   for (const image of await images.all()) {
     await loaded(image); await expect(image).toHaveCSS('object-fit', 'contain'); await expect(image).toHaveCSS('mix-blend-mode', 'normal');
     const r = await image.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(0); expect(r.y).toBeGreaterThanOrEqual(0); expect(r.x + r.width).toBeLessThanOrEqual(viewport.width + 1); expect(r.y + r.height).toBeLessThanOrEqual(viewport.height + 1);
@@ -91,11 +92,22 @@ for (const viewport of [{ width: 1440, height: 1024 }, { width: 390, height: 844
   await page.getByRole('button', { name: '새 게임', exact: true }).click(); await expect(page.locator('.transfer-screen')).toBeVisible();
 });
 
-test('미제공 MG와 CA/H 로드 실패는 기존 자리표시자, 잘못된 인물로 대체하지 않음', async ({ page }) => {
+test('홈·로고 로드 실패도 대체 표시와 새 게임 유지', async ({ page }) => {
+  await page.route('**/assets/ui/home.webp', route => route.abort());
+  await page.route('**/assets/ui/logo.webp', route => route.abort());
+  await page.goto('/');
+  await expect(page.locator('.title-art-fallback')).toContainText('이미지 준비 중');
+  await expect(page.locator('.logo h1')).toHaveText('러브 앤 케미스트리');
+  await page.getByRole('button', { name: '새 게임', exact: true }).click();
+  await expect(page.locator('.transfer-screen')).toBeVisible();
+});
+
+test('MG/CA/H 로드 실패는 기존 자리표시자, 잘못된 인물로 대체하지 않음', async ({ page }) => {
   // Install before the title loads H too; decoded-image caches may otherwise
   // satisfy the later standing without issuing the request being aborted.
   await page.route('**/assets/characters/H.webp', route => route.abort());
   await page.route('**/assets/characters/CA.webp', route => route.abort());
+  await page.route('**/assets/characters/MG.webp', route => route.abort());
   await page.goto('/');
   for (const code of ['MG', 'CA']) { const s = await page.evaluate(async c => (await import('/tests/asset-fixtures.js')).standingState(c), code); await load(page, s); await expect(page.locator('.standing')).toHaveCount(0); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s)); }
   const s = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).standingState('H')); await load(page, s); await expect(page.locator('.portrait')).toContainText('이미지 준비 중'); expect(game(await save(page))).toEqual(game(s));
@@ -125,7 +137,7 @@ test('옥상 전용 SNAP2-H를 도서관 변형에 재사용하지 않음·미�
   await page.getByRole('button', { name: '스냅 정보 보기 ▸' }).click(); await page.getByRole('button', { name: '스냅 닫고 계속' }).click(); expect((await save(page)).affinity).toEqual(before.affinity);
 });
 
-test('배포 하위 경로 실제 production: 스탠딩6·스냅15 전부 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
+test('배포 하위 경로 실제 production: 스탠딩7·스냅15·홈·로고 WebP 로드, 루트 assets 요청 없음', async ({ page }) => {
   test.setTimeout(120000); await page.goto('/');
   const fixtures = await page.evaluate(async ({ ids, codes }) => { const f = await import('/tests/asset-fixtures.js'); return { characters: Object.keys((await import('/src/character-art.js')).CHARACTER_ART), states: codes.map(c => f.standingState(c)), snaps: ids.map(id => f.snapState(id)) }; }, { ids: SNAP_IDS, codes: Object.keys(CODES) });
   // Build the current source into an isolated directory: npm test must work
@@ -141,9 +153,10 @@ test('배포 하위 경로 실제 production: 스탠딩6·스냅15 전부 WebP �
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const origin = `http://127.0.0.1:${server.address().port}`; const wrong = []; page.on('request', r => { if (new URL(r.url()).pathname.startsWith('/assets/')) wrong.push(r.url()); });
   try {
     await page.goto(`${origin}/lovechemistry/index.html?qa=assets#screen`);
+    await loaded(page.locator('.title-home')); await loaded(page.locator('.game-logo'));
     for (let i = 0; i < fixtures.states.length; i++) { await load(page, fixtures.states[i]); await loaded(page.getByAltText(`${fixtures.characters[i]} 스탠딩`)); }
     for (const { s, ledger } of fixtures.snaps) { await load(page, s, ledger); await loaded(page.locator('.snap-backdrop img')); }
-    for (const file of [...Object.keys(CODES).map(c => `characters/${c}.webp`), ...SNAP_IDS.map(id => `snaps/${id}.webp`)]) {
+    for (const file of ['ui/home.webp', 'ui/logo.webp', ...Object.keys(CODES).map(c => `characters/${c}.webp`), ...SNAP_IDS.map(id => `snaps/${id}.webp`)]) {
       const response = await page.request.get(`${origin}/lovechemistry/assets/${file}`); expect(response.status()).toBe(200); expect(response.headers()['content-type']).toBe('image/webp'); const b = await response.body(); expect(b.subarray(0,4).toString()).toBe('RIFF'); expect(b.subarray(8,12).toString()).toBe('WEBP');
     }
     expect(wrong).toEqual([]);

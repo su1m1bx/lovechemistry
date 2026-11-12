@@ -42,6 +42,8 @@ main { min-height: 0; min-width: 0; position: relative; }
 .title-decoration { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: var(--dots) 0 0 / 22px 22px, linear-gradient(150deg, #ffe4f3, #fac8e1); clip-path: polygon(0 0, 49% 0, 37% 100%, 0 100%); }
 .title-screen .intro { position: absolute; left: 3.889%; top: 25.098%; width: 46.181%; z-index: 2; }
 .logo h1 { color: #d54f93; font-weight: 900; text-shadow: 3px 0 white, -3px 0 white, 0 3px white, 0 -3px white, 4px 6px 0 #eaa4c8; }
+.game-logo { display: block; width: 100%; height: auto; max-height: 30dvh; object-fit: contain; }
+.splash-screen .logo { width: min(680px, 90vw); }
 .logo .eyebrow { color: #9e3d70; letter-spacing: .2em; }
 .title-screen .logo h1 { font-size: clamp(40px, 5vw, 76px); }
 .title-screen .logo { animation: logo-settle .4s ease-out; }
@@ -55,15 +57,8 @@ main { min-height: 0; min-width: 0; position: relative; }
 .title-storage[open] { background: #fffdf9f5; border-radius: 12px; }
 .menu-card button { display: block; width: 100%; margin: 8px 0; }
 .menu-card .muted { margin: 16px 4px 0; }
-.title-art { position: absolute; inset: 0; pointer-events: none; }
-.title-standing { position: absolute; object-fit: contain; object-position: center bottom; }
-.title-standing[data-character="염소"] { left: 66.806%; top: 36.914%; width: 25.417%; height: 54.102%; }
-.title-standing[data-character="탄소"] { left: 43.264%; top: 35.742%; width: 23.542%; height: 50.195%; }
-/* The reference extends these front sprites past the frame. Fit the whole
-   originals inside their slots instead, retaining heads AND hands. */
-.title-standing[data-character="나트륨"] { left: 75.417%; top: 52.93%; width: 24.583%; height: 43.262%; }
-.title-standing[data-character="헬륨"] { left: 54.375%; top: 52.832%; width: 28.194%; height: 43.36%; }
-.title-standing[data-character="수소"] { left: 38.958%; top: 55.273%; width: 20.347%; height: 43.359%; }
+.title-art { position: absolute; inset: 20% 0 3% 43%; pointer-events: none; }
+.title-home { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
 .title-art-fallback { position: relative; display: inline-block; margin: 12px; }
 .splash-screen, .transfer-screen, .name-screen { display: grid; align-content: center; justify-items: center; padding: 24px; text-align: center; overflow: auto; background: var(--dots) 0 0 / 24px 24px, radial-gradient(ellipse at 50% 40%, #fff8fc, #ffd6eb); }
 .splash-skip { margin-top: 24px; }
@@ -211,11 +206,7 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .title-screen { padding: 0; }
   .title-screen .intro { top: 40%; left: 0; width: 100%; padding: 12px; }
   .title-art { inset: 0 0 auto; height: 40%; }
-  .title-standing[data-character="탄소"] { left: 6%; top: 0; width: 34%; height: 85%; }
-  .title-standing[data-character="염소"] { left: 54%; top: 0; width: 34%; height: 85%; }
-  .title-standing[data-character="수소"] { left: 0; top: 24%; width: 30%; height: 76%; }
-  .title-standing[data-character="헬륨"] { left: 28%; top: 24%; width: 34%; height: 76%; }
-  .title-standing[data-character="나트륨"] { left: 65%; top: 24%; width: 34%; height: 76%; }
+  .title-screen .game-logo { max-height: 20dvh; }
   .title-screen .logo { text-align: center; }
   .title-screen .logo h1 { font-size: 40px; }
   .title-screen .subtitle { font-size: 14px; }
@@ -300,6 +291,7 @@ dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; } dt { font-wei
   .has-content .cast-slot { inset: auto; width: 150px; }
   .has-content .cast-slot:not(:only-child), .snap-cast .cast-slot:not(:only-child) { inset: auto; }
   .title-screen .intro { top: 6%; }
+  .title-screen .game-logo { max-height: 24dvh; }
   .title-screen .menu-card { margin-top: 12px; }
   .title-screen .menu-card button { margin: 5px 0; padding: 6px 12px; }
   .title-screen .subtitle { display: none; }
