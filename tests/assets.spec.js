@@ -70,7 +70,7 @@ test('밝은 VN: 큰 스탠딩·작은 HUD·하단 대사창, 선택 중에도 �
   await load(page, choice); await expect(page.locator('.choices')).toBeVisible(); await expect(page.locator('.standing')).toBeVisible();
   const dialogue = await page.locator('.dialogue').boundingBox(); expect(Math.abs(dialogue.y - 695)).toBeLessThan(2);
   const buttons = await page.locator('.choices button').all(); expect(buttons.length).toBeGreaterThan(1);
-  for (const button of buttons) { const r = await button.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(189); expect(r.width).toBeGreaterThan(990); expect(r.y + r.height).toBeLessThan(dialogue.y - 20); }
+  for (const button of buttons) { const r = await button.boundingBox(); expect(r.x).toBeGreaterThanOrEqual(189); expect(r.width).toBeLessThanOrEqual(560); expect(r.height).toBeGreaterThanOrEqual(43.99); expect(r.y + r.height).toBeLessThan(dialogue.y - 20); }
   await page.screenshot({ path: info.outputPath('figma-choices.png') });
   const multi = await page.evaluate(async () => (await import('/tests/asset-fixtures.js')).multiState()); await load(page, multi);
   for (const [i, center] of [374.4, 1065.6].entries()) {

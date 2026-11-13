@@ -12,9 +12,11 @@ import { commitHelium, reconcileHelium, HeliumConflict, persistVerified } from '
 import { CHARACTER_ART } from './character-art.js';
 import { snapImage } from './snaps.js';
 import { createTypewriter } from './typewriter.js';
+import { createSceneFeedback } from './scene-feedback.js';
 
 const app = document.querySelector('#app');
 const typewriter = createTypewriter();
+const sceneFeedback = createSceneFeedback();
 let loadedDialogue = false;
 let state = null;
 let screen = 'splash';
@@ -41,7 +43,7 @@ function acquirePlayLock() {
 acquirePlayLock();
 window.addEventListener('pagehide', () => releaseTab?.());
 window.addEventListener('pageshow', event => { if (event.persisted) { activeTab = false; render(); acquirePlayLock(); } });
-const interactive = 'button, input, select, textarea, a, summary, [contenteditable], .learning-area, .lab, .exam, dialog';
+const interactive = 'button, input, select, textarea, a, summary, [contenteditable], .learning-area, .lab, .exam, .scene-notice, dialog';
 const el = (tag, text, cls) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -477,6 +479,7 @@ function render() {
   const typed = main.querySelector('[data-typewriter]');
   const lineKey = `${position}:${main.dataset.snapPhase || ''}`;
   typewriter.bind(typed, lineKey, typed?.textContent || '', { instant: loadedDialogue, pause: Boolean(panel) || document.hidden });
+  sceneFeedback.update(app, screen === 'play' ? { day: state.day, location: metadata(state).location, affinity: state.affinity } : null, loadedDialogue);
   loadedDialogue = false;
   if (!activeTab) app.append(el('p', navigator.locks ? '다른 탭이 진행 중입니다. 이 탭은 읽기 전용입니다. 진행 중인 탭을 닫은 뒤 새로고침해 주세요.' : '단일 탭 잠금을 지원하지 않는 브라우저입니다. 진행과 헬륨 요청은 차단했습니다. 지원 브라우저에서 열어 주세요.', 'status'));
   const status = el('p', message, 'status'); status.setAttribute('role', 'status'); app.append(status);
